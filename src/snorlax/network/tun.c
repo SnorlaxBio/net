@@ -5,6 +5,7 @@
 #include <linux/if_tun.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <string.h>
@@ -12,6 +13,10 @@
 #include <stdlib.h>
 
 #include "tun.h"
+
+#include "netlink.h"
+#include "netlink/ip/addr.h"
+#include "netlink/ip/link.h"
 
 typedef network_tun_t * (*network_tun_func_rem_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_open_t)(___notnull network_tun_t *);
@@ -92,24 +97,6 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
 #endif // RELEASE
             }
 
-            ((struct sockaddr_in *)(&(req.ifr_addr)))->sin_family = AF_INET;
-            ((struct sockaddr_in *)(&(req.ifr_addr)))->sin_port = 0;
-            ((struct sockaddr_in *)(&(req.ifr_addr)))->sin_addr.s_addr = inet_addr("10.0.0.1");
-
-            if(ioctl(fd, SIOCSIFADDR, &req) < 0) {
-#ifndef   RELEASE
-                snorlaxdbg(false, true, "warning", "fail to ioctl(...) caused by %d", errno);
-#endif // RELEASE
-            }
-
-            ((struct sockaddr_in *)(&(req.ifr_addr)))->sin_addr.s_addr = inet_addr("255.255.255.0");
-
-            if(ioctl(fd, SIOCSIFNETMASK, &req) < 0) {
-#ifndef   RELEASE
-                snorlaxdbg(false, true, "warning", "fail to ioctl(...) caused by %d", errno);
-#endif // RELEASE
-            }
-
             close(fd);
         } else {
 #ifndef   RELEASE
@@ -120,6 +107,15 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
         // SET ADDR
 
         descriptor_nonblock_on((descriptor_t *) descriptor);
+
+        uint8_t addr[4] = { 10, 0, 0, 1};
+
+        // network_netlink_ip_addr_req(network_netlink_get(), AF_INET, addr, 24, "tun0", nil);
+        // network_netlink_ip_link_setup_req(network_netlink_get(), "tun0", nil);
+        // network_ip_addr_add(AF_INET, inet, 24, "tun0");
+
+// snorlax@surface:~$ sudo ip addr add 10.0.0.1/24 dev tun0
+// snorlax@surface:~$ sudo ip link set up dev tun0
 
     } else {
 #ifndef   RELEASE

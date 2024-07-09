@@ -67,12 +67,20 @@ include_directories(src include)
 link_directories(${PROJECT_SOURCE_DIR}/lib ${PROJECT_SOURCE_DIR}/build)
 
 set(SNORLAX_NET_SOURCE      src/snorlax/network.c
-                            src/snorlax/network/tun.c)
+                            src/snorlax/network/ip/addr.c
+                            src/snorlax/network/tun.c
+                            src/snorlax/network/netlink.c
+                            src/snorlax/network/netlink/ip/addr.c
+                            src/snorlax/network/netlink/ip/link.c)
 set(SNORLAX_NET_HEADER      src/snorlax/network.h
-                            src/snorlax/network/tun.h)
+                            src/snorlax/network/ip/addr.h
+                            src/snorlax/network/tun.h
+                            src/snorlax/network/netlink.h
+                            src/snorlax/network/netlink/ip/addr.h
+                            src/snorlax/network/netlink/ip/link.h)
 
-add_executable(snorlax-network-tun  src/snorlax/network/tun.c
-                                    src/snorlax/network/tun.h
+add_executable(snorlax-network-tun  ${SNORLAX_NET_SOURCE}
+                                    ${SNORLAX_NET_HEADER}
                                     src/snorlax/network/tun/main.c)
 target_compile_options(snorlax-network-tun PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-target_link_libraries(snorlax-network-tun libsnorlax-eva.a libsnorlax-std.a)
+target_link_libraries(snorlax-network-tun libsnorlax-eva.a libsnorlax-protocol.a libsnorlax-std.a)
