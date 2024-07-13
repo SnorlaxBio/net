@@ -76,8 +76,6 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
         req.ifr_flags = req.ifr_flags | IFF_NO_PI;          // IFF_ONE_QUEUE
         req.ifr_flags = req.ifr_flags | IFF_TUN;
 
-        snprintf(req.ifr_name, 16, "tun%d", 0);
-
         if(ioctl(descriptor->value, TUNSETIFF, &req) < 0) {
 #ifndef   RELEASE
             snorlaxdbg(true, false, "critical", "fail to ioctl => %d", errno);
@@ -110,9 +108,12 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
 
         uint8_t addr[4] = { 10, 0, 0, 1};
 
-        // network_netlink_ip_addr_req(network_netlink_get(), AF_INET, addr, 24, "tun0", nil);
-        // network_netlink_ip_link_setup_req(network_netlink_get(), "tun0", nil);
-        // network_ip_addr_add(AF_INET, inet, 24, "tun0");
+        // descriptor_flush(network_netlink_get());
+
+        // descriptor_request_wait
+
+        network_netlink_ip_addr_req(network_netlink_get(), AF_INET, addr, 24, "tun0", network_netlink_ip_addr_res);
+        network_netlink_ip_link_setup_req(network_netlink_get(), "tun0", network_netlink_ip_link_setup_res);
 
 // snorlax@surface:~$ sudo ip addr add 10.0.0.1/24 dev tun0
 // snorlax@surface:~$ sudo ip link set up dev tun0

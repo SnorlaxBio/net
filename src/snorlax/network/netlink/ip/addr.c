@@ -25,8 +25,8 @@ struct network_netlink_ip_addr_req {
 static void network_netlink_ip_addr_req_addr_add(network_netlink_ip_addr_req_t * req, uint16_t type, uint8_t * inet, uint32_t len);
 static void network_netlink_ip_addr_req_flags_add(network_netlink_ip_addr_req_t * req, uint16_t type, uint32_t value);
 
-extern int64_t network_netlink_ip_addr_req(network_netlink_t * descriptor, uint8_t family, uint8_t * addr, uint32_t subnetmasklen, const char * dev, network_network_res_t callback) {
-    network_netlink_ip_addr_req_t * req = network_netlink_request_pop(descriptor, network_netlink_ip_addr_req_t, true);
+extern network_netlink_req_t * network_netlink_ip_addr_req(network_netlink_t * descriptor, uint8_t family, uint8_t * addr, uint32_t subnetmasklen, const char * dev, network_netlink_res_callback_t callback) {
+    network_netlink_ip_addr_req_t * req = (network_netlink_ip_addr_req_t *) calloc(1, sizeof(network_netlink_ip_addr_req_t));
 
     req->header.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
     req->header.nlmsg_flags = (NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL);
@@ -39,20 +39,20 @@ extern int64_t network_netlink_ip_addr_req(network_netlink_t * descriptor, uint8
         network_netlink_ip_addr_req_addr_add(req, IFA_LOCAL, addr, 4);
         network_netlink_ip_addr_req_flags_add(req, IFA_FLAGS, 0);
         network_netlink_ip_addr_req_addr_add(req, IFA_ADDRESS, addr, 4);
-        network_netlink_ip_addr_req_addr_add(req, IFA_BROADCAST, network_ip_addr_to_broadcast(addr, 4, subnetmasklen, broadcast), 4);
+        network_netlink_ip_addr_req_addr_add(req, IFA_BROADCAST, network_ip_addr_to_broadcast(addr, 4, subnetmasklen, (uint32_t *) broadcast), 4);
 
         req->message.ifa_prefixlen = subnetmasklen;
         req->message.ifa_scope = addr[0] == 127 ? RT_SCOPE_HOST : 0;
         req->message.ifa_index = if_nametoindex(dev);
 
-        return network_netlink_req(descriptor, (struct nlmsghdr *) req, nil);
+        return network_netlink_req(descriptor, (struct nlmsghdr *) req, callback);
     } else {
 #ifndef   RELEASE
         snorlaxdbg(true, false, "implement", "");
 #endif // RELEASE
     }
     
-    return fail;
+    return nil;
 }
 
 static void network_netlink_ip_addr_req_addr_add(network_netlink_ip_addr_req_t * req, uint16_t type, uint8_t * addr, uint32_t len) {
@@ -63,7 +63,7 @@ static void network_netlink_ip_addr_req_addr_add(network_netlink_ip_addr_req_t *
     attr->rta_type = type;
     attr->rta_len = length;
     
-    memcpy(RTA_DATA(attr), addr, len);
+    memcpy(RTA_DATA(attr), addr, length);
 
     req->header.nlmsg_len = NLMSG_ALIGN(req->header.nlmsg_len) + RTA_ALIGN(length);
 }
@@ -79,4 +79,8 @@ static void network_netlink_ip_addr_req_flags_add(network_netlink_ip_addr_req_t 
     memcpy(RTA_DATA(attr), &value, sizeof(uint32_t));
 
     req->header.nlmsg_len = NLMSG_ALIGN(req->header.nlmsg_len) + RTA_ALIGN(length);
+}
+
+extern void network_netlink_ip_addr_res(void * request, uint64_t requestlen, void * response, uint64_t responselen) {
+    printf("network_netlink_ip_addr_res\n");
 }

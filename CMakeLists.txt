@@ -70,12 +70,16 @@ set(SNORLAX_NET_SOURCE      src/snorlax/network.c
                             src/snorlax/network/ip/addr.c
                             src/snorlax/network/tun.c
                             src/snorlax/network/netlink.c
+                            src/snorlax/network/netlink/req.c
+                            src/snorlax/network/netlink/req/list.c
                             src/snorlax/network/netlink/ip/addr.c
                             src/snorlax/network/netlink/ip/link.c)
 set(SNORLAX_NET_HEADER      src/snorlax/network.h
                             src/snorlax/network/ip/addr.h
                             src/snorlax/network/tun.h
                             src/snorlax/network/netlink.h
+                            src/snorlax/network/netlink/req.h
+                            src/snorlax/network/netlink/req/list.h
                             src/snorlax/network/netlink/ip/addr.h
                             src/snorlax/network/netlink/ip/link.h)
 

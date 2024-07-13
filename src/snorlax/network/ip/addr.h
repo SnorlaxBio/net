@@ -12,7 +12,7 @@
 
 #include <snorlax.h>
 
-extern uint8_t * network_ip_addr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint8_t * out);
+extern uint8_t * network_ip_addr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint32_t * out);
 
 // sudo ip addr add 10.0.0.1/24 dev tun0
 //                  [address]/[subnet mask number]
