@@ -43,6 +43,10 @@ struct network_tun_func {
 extern network_tun_t * network_tun_gen(void);
 extern int32_t network_tun_func_open(network_tun_t * descriptor);
 
+/**
+ * TODO: EXCLUDE, INCLUDE ROUTE ...
+ */
+
 #define network_tun_rem(descriptor)             ((descriptor)->func->rem(descriptor))
 #define network_tun_open(descriptor)            ((descriptor)->func->open(descriptor))
 #define network_tun_read(descriptor)            ((descriptor)->func->read(descriptor))

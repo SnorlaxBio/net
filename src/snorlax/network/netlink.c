@@ -213,7 +213,9 @@ static int64_t network_netlink_func_write(___notnull network_netlink_t * descrip
 
 
             for(network_netlink_message_t * node = (network_netlink_message_t *) out->front; node != nil; node = node->next) {
+#ifndef   RELEASE
                 netlink_protocol_debug(stdout, node->message);
+#endif // RELEASE
                 struct iovec iov = { node->message, node->message->nlmsg_len };
                 struct msghdr msg = { &addr, sizeof(addr), &iov, 1, NULL, 0, 0 };
                 node->message->nlmsg_flags = node->message->nlmsg_flags | NLM_F_ACK;
@@ -351,7 +353,10 @@ static int32_t network_netlink_func_wait(___notnull network_netlink_t * descript
                     network_netlink_read(descriptor);
                     for(network_netlink_message_t * node = (network_netlink_message_t *) in->tail; node != nil; node = node->prev) {
                         if(request->message->nlmsg_seq == node->message->nlmsg_seq) {
+#ifndef   RELEASE
                             netlink_protocol_debug(stdout, request->message);
+#endif // RELEASE
+
                             if(node->status & network_netlink_message_state_res) {
 #ifndef   RELEASE
                                 snorlaxdbg(false, true, "response", "");

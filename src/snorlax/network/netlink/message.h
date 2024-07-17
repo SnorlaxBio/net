@@ -37,7 +37,7 @@ struct network_netlink_message_func {
 };
 
 extern network_netlink_message_t * network_netlink_message_gen(struct nlmsghdr * nlmsg);
-extern struct nlmsghdr * network_netlink_message_ipaddr_gen(uint8_t family, uint8_t * inet, uint32_t subnetmasklen, const char * dev);
+extern struct nlmsghdr * network_netlink_message_ipaddr_add_gen(uint8_t family, uint8_t * inet, uint32_t subnetmasklen, const char * dev);
 extern struct nlmsghdr * network_netlink_message_iplink_setup_gen(const char * dev);
 
 extern void network_netlink_message_rtattr_object_add(struct nlmsghdr * req, uint16_t type, const uint8_t * data, uint32_t len);

@@ -100,7 +100,7 @@ struct network_netlink_message_ipaddr_req {
 
 typedef struct network_netlink_message_ipaddr_req network_netlink_message_ipaddr_req_t;
 
-extern struct nlmsghdr * network_netlink_message_ipaddr_gen(uint8_t family, uint8_t * addr, uint32_t subnetmasklen, const char * dev) {
+extern struct nlmsghdr * network_netlink_message_ipaddr_add_gen(uint8_t family, uint8_t * addr, uint32_t subnetmasklen, const char * dev) {
     if(family == AF_INET) {
         network_netlink_message_ipaddr_req_t * req = (network_netlink_message_ipaddr_req_t *) calloc(1, sizeof(network_netlink_message_ipaddr_req_t));
 
