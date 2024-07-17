@@ -15,7 +15,6 @@
 #include <snorlax.h>
 #include <snorlax/buffer/list.h>
 #include <snorlax/descriptor.h>
-#include <snorlax/network/netlink/req/list.h>
 
 struct network_netlink;
 struct network_netlink_func;
