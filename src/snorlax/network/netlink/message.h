@@ -44,6 +44,6 @@ extern void network_netlink_message_rtattr_object_add(struct nlmsghdr * req, uin
 extern void network_netlink_message_rtattr_uint32_add(struct nlmsghdr * req, uint16_t type, uint32_t value);
 extern void network_netlink_message_rtattr_int32_add(struct nlmsghdr * req, uint16_t type, int32_t value);
 
-#define network_netlnk_message_tail(req)    ((struct rtattr *) (((void *) (req))) + NLMSG_ALIGN((req)->nlmsg_len))
+#define network_netlnk_message_tail(req)    ((struct rtattr *) (((void *) (req)) + NLMSG_ALIGN((req)->nlmsg_len)))
 
 #endif // __SNORLAX__NETWORK_NETLINK_MESSAGE__H__

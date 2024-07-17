@@ -84,7 +84,7 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
             return fail;
         }
 
-        // TX QUEUE SET / 
+        // TX QUEUE SET: REFACTOR USE NETLINK
         int fd = socket(AF_INET, SOCK_DGRAM, 0);
         if(fd > 0) {
             req.ifr_qlen = ETH_DATA_LEN;
@@ -101,18 +101,12 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
 #endif // RELEASE
         }
 
-        // SET ADDR
-
         descriptor_nonblock_on((descriptor_t *) descriptor);
 
-        uint8_t addr[4] = { 10, 0, 0, 1};
+        uint8_t addr[4] = { 10, 0, 0, 1 };
 
-        // descriptor_flush(network_netlink_get());
-
-        // descriptor_request_wait
-
-        network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_gen(AF_INET, addr, 24, "tun0"));
-        network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0"));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_gen(AF_INET, addr, 24, "tun0")));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0")));
 
         // network_netlink_ip_addr_req(network_netlink_get(), AF_INET, addr, 24, "tun0", network_netlink_ip_addr_res);
         // network_netlink_ip_link_setup_req(network_netlink_get(), "tun0", network_netlink_ip_link_setup_res);

@@ -29,10 +29,6 @@ static network_netlink_message_func_t func = {
 };
 
 extern network_netlink_message_t * network_netlink_message_gen(struct nlmsghdr * nlmsg) {
-#ifndef   RELEASE
-    snorlaxdbg(nlmsg == nil, false, "critical", "");
-#endif // RELEASE
-
     network_netlink_message_t * message = (network_netlink_message_t *) calloc(1, sizeof(network_netlink_message_t));
 
     message->func = address_of(func);
@@ -109,7 +105,7 @@ extern struct nlmsghdr * network_netlink_message_ipaddr_gen(uint8_t family, uint
         network_netlink_message_ipaddr_req_t * req = (network_netlink_message_ipaddr_req_t *) calloc(1, sizeof(network_netlink_message_ipaddr_req_t));
 
         req->header.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
-        req->header.nlmsg_flags = (NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL);
+        req->header.nlmsg_flags = (NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK);
         req->header.nlmsg_type = RTM_NEWADDR;
 
         req->message.ifa_family = family;

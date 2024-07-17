@@ -26,7 +26,8 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 static int64_t network_netlink_func_write(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_close(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_check(___notnull network_netlink_t * descriptor, uint32_t state);
-static int32_t network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message);
+static network_netlink_message_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message);
+static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_t * request);
 
 static network_netlink_func_t func = {
     network_netlink_func_rem,
@@ -35,7 +36,8 @@ static network_netlink_func_t func = {
     network_netlink_func_write,
     network_netlink_func_close,
     network_netlink_func_check,
-    network_netlink_func_req
+    network_netlink_func_req,
+    network_netlink_func_wait
 };
 
 extern network_netlink_t * network_netlink_get(void) {
@@ -116,6 +118,8 @@ static int32_t network_netlink_func_open(___notnull network_netlink_t * descript
         }
 
         descriptor_nonblock_on((descriptor_t *) descriptor);
+
+        descriptor->status = descriptor->status | (descriptor_state_open | descriptor_state_write);
     } else {
 #ifndef   RELEASE
         snorlaxdbg(false, true, "caution", "");
@@ -133,6 +137,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
     if(descriptor->value > invalid) {
         if(descriptor->status & descriptor_state_open_in) {
             buffer_list_t * in = descriptor->buffer.in;
+            buffer_list_t * out = descriptor->buffer.out;
 
             /**
              * Need to upgrade : 현재의 버퍼는 로컬 스택에 저장하고 그것을 메시지에 담는다.
@@ -154,6 +159,9 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
                     network_netlink_message_t * node = network_netlink_message_gen(message);
                     buffer_list_push(in, (buffer_list_node_t *) node);
                     in->back = (buffer_list_node_t *) node;
+                    if(message->nlmsg_type == NLMSG_ERROR){
+                        node->status = node->status | network_netlink_message_state_res;
+                    }
                 }
             } else if(n == 0) {
                 descriptor->status = descriptor->status & (~descriptor_state_read);
@@ -205,6 +213,7 @@ static int64_t network_netlink_func_write(___notnull network_netlink_t * descrip
 
 
             for(network_netlink_message_t * node = (network_netlink_message_t *) out->front; node != nil; node = node->next) {
+                netlink_protocol_debug(stdout, node->message);
                 struct iovec iov = { node->message, node->message->nlmsg_len };
                 struct msghdr msg = { &addr, sizeof(addr), &iov, 1, NULL, 0, 0 };
                 node->message->nlmsg_flags = node->message->nlmsg_flags | NLM_F_ACK;
@@ -281,7 +290,7 @@ static int32_t network_netlink_func_check(___notnull network_netlink_t * descrip
     return true;
 }
 
-static int32_t network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message) {
+static network_netlink_message_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message) {
 #ifndef   RELEASE
     snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(message == nil, false, "critical", ""); 
@@ -295,7 +304,74 @@ static int32_t network_netlink_func_req(___notnull network_netlink_t * descripto
 
     if(descriptor->buffer.out->front == nil) descriptor->buffer.out->front = (buffer_list_node_t *) node;
 
-    return network_netlink_write(descriptor);
+    network_netlink_write(descriptor);
+
+    // TODO: ERROR HANDLING
+
+    return node;
+}
+
+static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_t * request) {
+#ifndef   RELEASE
+    snorlaxdbg(descriptor == nil, false, "critical", "");
+    snorlaxdbg(request == nil, false, "critical", "");
+#endif // RELEASE
+
+    if(descriptor->value > invalid) {
+        struct pollfd fds[1];
+        buffer_list_t * in = descriptor->buffer.in;
+        buffer_list_t * out = descriptor->buffer.out;
+        network_netlink_write(descriptor);
+
+        // ERROR HANDLING
+
+        while(descriptor_exception_get(descriptor) == nil) {
+            fds[0].fd = descriptor->value;
+            fds[0].events = (POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL);
+            if(out->front) fds[0].events = fds[0].events | POLLOUT;
+            fds[0].revents = 0;
+
+            int n = poll(fds, 1, 1);
+
+            for(int i = 0; i < n; i++) {
+                if(fds[i].revents & (POLLPRI | POLLERR | POLLHUP | POLLNVAL)) {
+                    int error = 0;
+                    socklen_t errorlen = sizeof(error);
+                    if(getsockopt(descriptor->value, SOL_SOCKET, SO_ERROR, &error, &errorlen) >= 0) {
+                        descriptor_exception_set(descriptor, descriptor_exception_type_system, error, poll);
+                    } else {
+                        descriptor_exception_set(descriptor, descriptor_exception_type_system, fds[i].revents, poll);
+                    }
+                    break;
+                }
+                if(fds[i].revents & POLLOUT) {
+                    network_netlink_write(descriptor);
+                }
+                if(fds[i].revents & POLLIN) {
+                    network_netlink_read(descriptor);
+                    for(network_netlink_message_t * node = (network_netlink_message_t *) in->tail; node != nil; node = node->prev) {
+                        if(request->message->nlmsg_seq == node->message->nlmsg_seq) {
+                            netlink_protocol_debug(stdout, request->message);
+                            if(node->status & network_netlink_message_state_res) {
+#ifndef   RELEASE
+                                snorlaxdbg(false, true, "response", "");
+#endif // RELEASE
+                                return success;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+    } else {
+#ifndef   RELEASE
+        snorlaxdbg(descriptor->value <= invalid, false, "critical", "");
+#endif // RELEASE
+    }
+
+    return fail;
 }
 
 // typedef network_netlink_t * (*network_netlink_rem_t)(___notnull network_netlink_t *);
@@ -895,79 +971,79 @@ static int32_t network_netlink_func_req(___notnull network_netlink_t * descripto
 // //     return fail;
 // }
 
-// extern void netlink_protocol_debug(FILE * stream, void * data) {
-// #ifndef   RELEASE
-//     snorlaxdbg(stream == nil, false, "critical", "");
-//     snorlaxdbg(data == nil, false, "critical", "");
-// #endif // RELEASE
-//     struct nlmsghdr * header = (struct nlmsghdr *) data;
+extern void netlink_protocol_debug(FILE * stream, void * data) {
+#ifndef   RELEASE
+    snorlaxdbg(stream == nil, false, "critical", "");
+    snorlaxdbg(data == nil, false, "critical", "");
+#endif // RELEASE
+    struct nlmsghdr * header = (struct nlmsghdr *) data;
 
-//     fprintf(stream, "header->nlmsg_len => %u\n", header->nlmsg_len);        // length of message including header
-//     fprintf(stream, "header->nlmsg_type => %u\n", header->nlmsg_type);      // message content
-//     fprintf(stream, "header->nlmsg_flags => %04x\n", header->nlmsg_flags);  // additional flags
-//     fprintf(stream, "header->nlmsg_seq => %u\n", header->nlmsg_seq);        // sequence number
-//     fprintf(stream, "header->nlmsg_pid => %u\n", header->nlmsg_pid);        // sending process port id
+    fprintf(stream, "header->nlmsg_len => %u\n", header->nlmsg_len);        // length of message including header
+    fprintf(stream, "header->nlmsg_type => %u\n", header->nlmsg_type);      // message content
+    fprintf(stream, "header->nlmsg_flags => %04x\n", header->nlmsg_flags);  // additional flags
+    fprintf(stream, "header->nlmsg_seq => %u\n", header->nlmsg_seq);        // sequence number
+    fprintf(stream, "header->nlmsg_pid => %u\n", header->nlmsg_pid);        // sending process port id
 
-// //    hexdump(stream, NLMSG_DATA(header), header->nlmsg_len - NLMSG_HDRLEN);
+//    hexdump(stream, NLMSG_DATA(header), header->nlmsg_len - NLMSG_HDRLEN);
 
-//     if(header->nlmsg_type == NLMSG_ERROR) {
-//         struct nlmsgerr * e = (struct nlmsgerr *) NLMSG_DATA(header);
+    if(header->nlmsg_type == NLMSG_ERROR) {
+        struct nlmsgerr * e = (struct nlmsgerr *) NLMSG_DATA(header);
 
-//         fprintf(stream, "e->error => %d\n", e->error);
-//         fprintf(stream, "e->msg.nlmsg_len => %d\n", e->msg.nlmsg_len);
-//         fprintf(stream, "e->msg.nlmsg_type => %d\n", e->msg.nlmsg_type);
-//         fprintf(stream, "e->msg.nlmsg_flags => %d\n", e->msg.nlmsg_flags);
-//         fprintf(stream, "e->msg.nlmsg_seq => %d\n", e->msg.nlmsg_seq);
-//         fprintf(stream, "e->msg.nlmsg_pid => %d\n", e->msg.nlmsg_pid);
-// 	// int		error;
-// 	// struct nlmsghdr msg;
-//     // 	__u32		nlmsg_len;	/* Length of message including header */
-// 	// __u16		nlmsg_type;	/* Message content */
-// 	// __u16		nlmsg_flags;	/* Additional flags */
-// 	// __u32		nlmsg_seq;	/* Sequence number */
-// 	// __u32		nlmsg_pid;	/* Sending process port ID */
-//         // fprintf(stream, "implement this");
+        fprintf(stream, "e->error => %d\n", e->error);
+        fprintf(stream, "e->msg.nlmsg_len => %d\n", e->msg.nlmsg_len);
+        fprintf(stream, "e->msg.nlmsg_type => %d\n", e->msg.nlmsg_type);
+        fprintf(stream, "e->msg.nlmsg_flags => %d\n", e->msg.nlmsg_flags);
+        fprintf(stream, "e->msg.nlmsg_seq => %d\n", e->msg.nlmsg_seq);
+        fprintf(stream, "e->msg.nlmsg_pid => %d\n", e->msg.nlmsg_pid);
+	// int		error;
+	// struct nlmsghdr msg;
+    // 	__u32		nlmsg_len;	/* Length of message including header */
+	// __u16		nlmsg_type;	/* Message content */
+	// __u16		nlmsg_flags;	/* Additional flags */
+	// __u32		nlmsg_seq;	/* Sequence number */
+	// __u32		nlmsg_pid;	/* Sending process port ID */
+        // fprintf(stream, "implement this");
 
-//     } else if(header->nlmsg_type == RTM_NEWADDR) {
-//         struct ifaddrmsg * message = NLMSG_DATA(header);
-//         fprintf(stream, "message->ifa_family => %d\n", message->ifa_family);
-//         fprintf(stream, "message->ifa_prefixlen => %d\n", message->ifa_prefixlen);
-//         fprintf(stream, "message->ifa_flags => %02x\n", message->ifa_flags);
-//         fprintf(stream, "message->ifa_scope => %d\n", message->ifa_scope);
-//         fprintf(stream, "message->ifa_index => %d\n", message->ifa_index);
+    } else if(header->nlmsg_type == RTM_NEWADDR) {
+        struct ifaddrmsg * message = NLMSG_DATA(header);
+        fprintf(stream, "message->ifa_family => %d\n", message->ifa_family);
+        fprintf(stream, "message->ifa_prefixlen => %d\n", message->ifa_prefixlen);
+        fprintf(stream, "message->ifa_flags => %02x\n", message->ifa_flags);
+        fprintf(stream, "message->ifa_scope => %d\n", message->ifa_scope);
+        fprintf(stream, "message->ifa_index => %d\n", message->ifa_index);
 
-//         for(struct rtattr * attr = netlink_protocol_data_get(struct rtattr *, message, sizeof(struct ifaddrmsg)); (void *) attr < netlink_protocol_data_end(header); attr = netlink_protocol_attr_next(attr)) {
-//             if(attr->rta_type == IFA_ADDRESS) {
-//                 uint8_t * value = (uint8_t *) RTA_DATA(attr);
-//                 fprintf(stream, "address => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
-//             } else if(attr->rta_type == IFA_LOCAL) {
-//                 uint8_t * value = (uint8_t *) RTA_DATA(attr);
-//                 fprintf(stream, "local => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
-//             } else if(attr->rta_type == IFA_BROADCAST) {
-//                 uint8_t * value = (uint8_t *) RTA_DATA(attr);
-//                 fprintf(stream, "broadcast => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
-//             } else if(attr->rta_type == IFA_LABEL) {
-//                 char * value = (char *) RTA_DATA(attr);
-//                 fprintf(stream, "label => %s\n", value);
-//             } else if(attr->rta_type == IFA_FLAGS) {
-//                 // 00000080
-//                 uint32_t * value = (uint32_t *) RTA_DATA(attr);
-//                 fprintf(stream, "flags => %08x\n", *value);
-//             } else if(attr->rta_type == IFA_CACHEINFO) {
-//                 // HOW TO DESERIALIZE CACHE INFO
-//                 struct ifa_cacheinfo * cacheinfo = (struct ifa_cacheinfo *) RTA_DATA(attr);
-//                 fprintf(stream, "cacheinfo->ifa_prefered => %d\n", cacheinfo->ifa_prefered == 0xFFFFFFFF ? 1 : 0);
-//                 fprintf(stream, "cacheinfo->ifa_valid => %d\n", cacheinfo->ifa_valid == 0xFFFFFFFF ? 1 : 0);
-//                 fprintf(stream, "cacheinfo->cstamp => %d\n", cacheinfo->cstamp);
-//                 fprintf(stream, "cacheinfo->tstamp => %d\n", cacheinfo->tstamp);
-//             } else {
-// #ifndef   RELEASE
-//                 snorlaxdbg(true, false, "implement", "");
-// #endif // RELEASE
-//             }
-//         }
-//     }    
-// }
+        for(struct rtattr * attr = netlink_protocol_data_get(struct rtattr *, message, sizeof(struct ifaddrmsg)); (void *) attr < netlink_protocol_data_end(header); attr = netlink_protocol_attr_next(attr)) {
+            if(attr->rta_type == IFA_ADDRESS) {
+                uint8_t * value = (uint8_t *) RTA_DATA(attr);
+                fprintf(stream, "address => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
+            } else if(attr->rta_type == IFA_LOCAL) {
+                uint8_t * value = (uint8_t *) RTA_DATA(attr);
+                fprintf(stream, "local => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
+            } else if(attr->rta_type == IFA_BROADCAST) {
+                uint8_t * value = (uint8_t *) RTA_DATA(attr);
+                fprintf(stream, "broadcast => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
+            } else if(attr->rta_type == IFA_LABEL) {
+                char * value = (char *) RTA_DATA(attr);
+                fprintf(stream, "label => %s\n", value);
+            } else if(attr->rta_type == IFA_FLAGS) {
+                // 00000080
+                uint32_t * value = (uint32_t *) RTA_DATA(attr);
+                fprintf(stream, "flags => %08x\n", *value);
+            } else if(attr->rta_type == IFA_CACHEINFO) {
+                // HOW TO DESERIALIZE CACHE INFO
+                struct ifa_cacheinfo * cacheinfo = (struct ifa_cacheinfo *) RTA_DATA(attr);
+                fprintf(stream, "cacheinfo->ifa_prefered => %d\n", cacheinfo->ifa_prefered == 0xFFFFFFFF ? 1 : 0);
+                fprintf(stream, "cacheinfo->ifa_valid => %d\n", cacheinfo->ifa_valid == 0xFFFFFFFF ? 1 : 0);
+                fprintf(stream, "cacheinfo->cstamp => %d\n", cacheinfo->cstamp);
+                fprintf(stream, "cacheinfo->tstamp => %d\n", cacheinfo->tstamp);
+            } else {
+#ifndef   RELEASE
+                snorlaxdbg(true, false, "implement", "type => %d", attr->rta_type);
+#endif // RELEASE
+            }
+        }
+    }    
+}
 
 // static void network_netlink_func_flush(___notnull network_netlink_t * descriptor, network_netlink_is_flushed_t check) {
 // #ifndef   RELEASE
