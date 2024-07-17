@@ -103,11 +103,13 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
 
         descriptor_nonblock_on((descriptor_t *) descriptor);
 
+        uint8_t all[4] = { 0, 0, 0, 0 };
         uint8_t addr[4] = { 10, 0, 0, 1 };
 
         // REMOVE MEMORY ALLOCATION ...
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_add_gen(AF_INET, addr, 24, "tun0")));
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0")));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr)));
 
 // snorlax@surface:~$ sudo ip addr add 10.0.0.1/24 dev tun0
 // snorlax@surface:~$ sudo ip link set up dev tun0

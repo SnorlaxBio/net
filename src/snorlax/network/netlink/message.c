@@ -152,3 +152,36 @@ extern struct nlmsghdr * network_netlink_message_iplink_setup_gen(const char * d
 
     return (struct nlmsghdr *) req;
 }
+
+struct network_netlink_message_iproute_req {
+    struct nlmsghdr header;
+    struct rtmsg message;
+    char buf[4096];
+};
+
+typedef struct network_netlink_message_iproute_req network_netlink_message_iproute_req_t;
+
+extern struct nlmsghdr * network_netlink_message_iproute_prepend_gen(uint8_t * addr, uint32_t subnetmasklen, uint8_t * next) {
+    network_netlink_message_iproute_req_t * req = (network_netlink_message_iproute_req_t *) calloc(1, sizeof(network_netlink_message_iproute_req_t));
+
+    req->header.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_ACK;
+    req->header.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+    req->header.nlmsg_type = RTM_NEWROUTE;
+
+    req->message.rtm_family = AF_INET;
+    req->message.rtm_table = RT_TABLE_MAIN;
+    req->message.rtm_scope = RT_SCOPE_UNIVERSE;
+    req->message.rtm_protocol = RTPROT_BOOT;
+    req->message.rtm_type = RTN_UNICAST;
+    req->message.rtm_dst_len = strcmp(addr, "default") == 0 ? -2 : subnetmasklen;
+
+    network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, RTA_DST, addr, 4);
+    network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, RTA_GATEWAY, next, 4);
+
+		// AF_INET <= addr->family = family;
+		// 4 <= addr->bytelen = af_byte_len(addr->family);
+		// -2 <= addr->bitlen = -2;
+		// addr->flags |= PREFIXLEN_SPECIFIED;
+
+    return (struct nlmsghdr *) req;
+}
