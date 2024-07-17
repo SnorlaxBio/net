@@ -15,8 +15,7 @@
 #include "tun.h"
 
 #include "netlink.h"
-#include "netlink/ip/addr.h"
-#include "netlink/ip/link.h"
+#include "netlink/message.h"
 
 typedef network_tun_t * (*network_tun_func_rem_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_open_t)(___notnull network_tun_t *);
@@ -112,8 +111,11 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
 
         // descriptor_request_wait
 
-        network_netlink_ip_addr_req(network_netlink_get(), AF_INET, addr, 24, "tun0", network_netlink_ip_addr_res);
-        network_netlink_ip_link_setup_req(network_netlink_get(), "tun0", network_netlink_ip_link_setup_res);
+        network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_gen(AF_INET, addr, 24, "tun0"));
+        network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0"));
+
+        // network_netlink_ip_addr_req(network_netlink_get(), AF_INET, addr, 24, "tun0", network_netlink_ip_addr_res);
+        // network_netlink_ip_link_setup_req(network_netlink_get(), "tun0", network_netlink_ip_link_setup_res);
 
 // snorlax@surface:~$ sudo ip addr add 10.0.0.1/24 dev tun0
 // snorlax@surface:~$ sudo ip link set up dev tun0
