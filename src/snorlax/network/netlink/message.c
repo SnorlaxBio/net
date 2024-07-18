@@ -174,7 +174,7 @@ extern struct nlmsghdr * network_netlink_message_iproute_get_gen(void) {
     return (struct nlmsghdr *) req;
 }
 
-extern struct nlmsghdr * network_netlink_message_iproute_prepend_gen(uint8_t * addr, uint32_t subnetmasklen, uint8_t * next) {
+extern struct nlmsghdr * network_netlink_message_iproute_prepend_gen(uint8_t * addr, uint32_t subnetmasklen, uint8_t * next, uint8_t table) {
     network_netlink_message_iproute_req_t * req = (network_netlink_message_iproute_req_t *) calloc(1, sizeof(network_netlink_message_iproute_req_t));
 
     req->header.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_ACK;
@@ -187,6 +187,7 @@ extern struct nlmsghdr * network_netlink_message_iproute_prepend_gen(uint8_t * a
     req->message.rtm_protocol = RTPROT_BOOT;
     req->message.rtm_type = RTN_UNICAST;
     req->message.rtm_dst_len = strcmp(addr, "default") == 0 ? -2 : subnetmasklen;
+    req->message.rtm_table = table;
 
     network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, RTA_DST, addr, 4);
     network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, RTA_GATEWAY, next, 4);
@@ -216,7 +217,9 @@ extern struct nlmsghdr * network_netlink_message_iprule_add_gen(uint32_t mark, u
 
     uint8_t addr[4] = { 0, 0, 0, 0 };
     network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, FRA_SRC, addr, 4);
-    network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_FWMARK, mark);
+    if(mark != (uint32_t) (-1)) {
+        network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_FWMARK, mark);
+    }
     network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_PRIORITY, priority);
 
     return (struct nlmsghdr *) req;

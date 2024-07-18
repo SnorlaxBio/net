@@ -7,10 +7,12 @@
 #include <netinet/in.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
+
+#include <snorlax/socket/client.h>
 
 #include "tun.h"
 
@@ -25,6 +27,8 @@ typedef int64_t (*network_tun_func_write_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_close_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_check_t)(___notnull network_tun_t *, uint32_t);
 
+static int32_t network_tun_func_project(___notnull network_tun_t * descriptor, ___notnull descriptor_t * s);
+
 static network_tun_func_t func = {
     (network_tun_func_rem_t) descriptor_func_rem,
     (network_tun_func_open_t) network_tun_func_open,
@@ -32,6 +36,7 @@ static network_tun_func_t func = {
     (network_tun_func_write_t) descriptor_func_write,
     (network_tun_func_close_t) descriptor_func_close,
     (network_tun_func_check_t) descriptor_func_check,
+    network_tun_func_project
 };
 
 extern network_tun_t * network_tun_gen(void) {
@@ -113,26 +118,9 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
         // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_get_gen(), network_netlink_message_response_debug));
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_add_gen(AF_INET, addr, 24, "tun0"), nil));
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0"), nil));
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(1, 100, network_netlink_table_main_id), nil));
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr), nil));
-
-// default via 172.24.128.1 dev eth0
-// 172.24.128.0/20 dev eth0 proto kernel scope link src 172.24.135.108
-
-        // int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-        // struct sockaddr_in client;
-// https://stackoverflow.com/questions/38606036/how-does-android-vpnservice-protect-fd-work
-// https://yahon.tistory.com/175
-// https://datahacker.blog/industry/technology-menu/networking/iptables/follow-the-ip-rules
-// https://www.reddit.com/r/WireGuard/comments/w20fx8/using_fwmark_instead_of_ip_rules_for_applying/
-// https://www.reddit.com/r/WireGuard/comments/w20fx8/using_fwmark_instead_of_ip_rules_for_applying/
-/*
-Set the mark for each packet sent through this socket (similar to the netfilter MARK target but socket-based).
-Changing the mark can be used for mark-based routing without netfilter or for packet filtering.  Setting this option requires the CAP_NET_ADMIN or CAP_NET_RAW (since Linux 5.17) capability.
-*/
-// snorlax@surface:~$ sudo ip addr add 10.0.0.1/24 dev tun0
-// snorlax@surface:~$ sudo ip link set up dev tun0
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(network_netlink_table_main_mark, network_netlink_table_main_priority, network_netlink_table_main_id), nil));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(network_netlink_table_tun_mark, network_netlink_table_tun_priority, network_netlink_table_tun_id), nil));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr, network_netlink_table_tun_id), nil));
 
     } else {
 #ifndef   RELEASE
@@ -141,4 +129,24 @@ Changing the mark can be used for mark-based routing without netfilter or for pa
     }
 
     return success;
+}
+
+static int32_t network_tun_func_project(___notnull network_tun_t * descriptor, ___notnull descriptor_t * s) {
+#ifndef   RELEASE
+//    snorlaxdbg(descriptor == nil, false, "critical", "");
+    snorlaxdbg(s == nil, false, "critical", "");
+#endif // RELEASE
+
+    if(s->value > invalid) {
+        int mark = network_netlink_table_main_mark;
+        if(setsockopt(s->value, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) == 0) {
+            printf("A\n");
+            return success;
+        }
+#ifndef   RELEASE
+        snorlaxdbg(false, true, "warning", "fail to setsockopt => %d", errno);
+#endif // RELEASE
+    }
+
+    return fail;
 }

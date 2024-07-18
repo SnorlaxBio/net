@@ -464,8 +464,8 @@ extern void netlink_protocol_debug(FILE * stream, void * data) {
         fprintf(stream, "message->rtm_scope => %d\n", message->rtm_scope);
         fprintf(stream, "message->rtm_type => %d\n", message->rtm_type);
         fprintf(stream, "message->rtm_flags => %d\n", message->rtm_flags);
-        fprintf(stream, "sizeof(struct rtmsg) => %d\n", sizeof(struct rtmsg));
-        fprintf(stream, "sizeof(struct nlmsghdr) => %d\n", sizeof(struct nlmsghdr));
+        fprintf(stream, "sizeof(struct rtmsg) => %lu\n", sizeof(struct rtmsg));
+        fprintf(stream, "sizeof(struct nlmsghdr) => %lu\n", sizeof(struct nlmsghdr));
 
         for(struct rtattr * attr = netlink_protocol_data_get(struct rtattr *, message, sizeof(struct rtmsg)); (void *) attr < netlink_protocol_data_end(header); attr = netlink_protocol_attr_next(attr)) {
             fprintf(stream, "%p\n", attr);
@@ -485,8 +485,8 @@ extern void netlink_protocol_debug(FILE * stream, void * data) {
         fprintf(stream, "message->rtm_scope => %d\n", message->rtm_scope);
         fprintf(stream, "message->rtm_type => %d\n", message->rtm_type);
         fprintf(stream, "message->rtm_flags => %d\n", message->rtm_flags);
-        fprintf(stream, "sizeof(struct rtmsg) => %d\n", sizeof(struct rtmsg));
-        fprintf(stream, "sizeof(struct nlmsghdr) => %d\n", sizeof(struct nlmsghdr));
+        fprintf(stream, "sizeof(struct rtmsg) => %lu\n", sizeof(struct rtmsg));
+        fprintf(stream, "sizeof(struct nlmsghdr) => %lu\n", sizeof(struct nlmsghdr));
 
         for(struct rtattr * attr = netlink_protocol_data_get(struct rtattr *, message, sizeof(struct rtmsg)); (void *) attr < netlink_protocol_data_end(header); attr = netlink_protocol_attr_next(attr)) {
             fprintf(stream, "attr->rta_type => %d\n", attr->rta_type);

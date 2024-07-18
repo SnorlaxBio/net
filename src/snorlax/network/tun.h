@@ -37,7 +37,9 @@ struct network_tun_func {
     int32_t (*close)(___notnull network_tun_t *);
     int32_t (*check)(___notnull network_tun_t *, uint32_t);
 
-    // int32_t (*protect)(___notnull network_tun_t *);
+    int32_t (*project)(___notnull network_tun_t *, ___notnull descriptor_t *);
+
+    // int32_t (*protect)(___notnull network_tun_t *, ___notnull network_tun_t *);
 };
 
 extern network_tun_t * network_tun_gen(void);
@@ -53,5 +55,6 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor);
 #define network_tun_write(descriptor)           ((descriptor)->func->write(descriptor))
 #define network_tun_close(descriptor)           ((descriptor)->func->close(descriptor))
 #define network_tun_check(descriptor, state)    ((descriptor)->func->check(descriptor))
+#define network_tun_project(descriptor, s)      ((descriptor)->func->project(descriptor, s))
 
 #endif // __SNORLAX__NETWORK_TUN__H__

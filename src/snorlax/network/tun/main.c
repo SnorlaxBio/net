@@ -21,13 +21,13 @@ static void readOn(descriptor_event_subscription_t * subscription, uint32_t type
     buffer_t * in = snorlax_eva_descriptor_event_subscription_buffer_in_get(subscription);
 
     while(buffer_length(in) > 0) {
-        uint8_t * datagram = buffer_front(in);
+        // uint8_t * datagram = buffer_front(in);
 
-        internet_protocol_debug(stdout, datagram);
+        // internet_protocol_debug(stdout, datagram);
 
-        uint32_t n = internet_protocol_length_get(datagram);
+        // uint32_t n = internet_protocol_length_get(datagram);
 
-        buffer_position_set(in, buffer_position_get(in) + n);
+        buffer_position_set(in, buffer_position_get(in) + buffer_length(in));
     }
 
     printf("hello packet end\n");

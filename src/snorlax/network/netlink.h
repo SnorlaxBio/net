@@ -59,7 +59,13 @@ struct network_netlink_func {
     int32_t (*wait)(___notnull network_netlink_t *, ___notnull network_netlink_message_request_t *);
 };
 
+#define network_netlink_table_main_mark             1
+#define network_netlink_table_main_priority         100
 #define network_netlink_table_main_id               254
+
+#define network_netlink_table_tun_mark              (-1)
+#define network_netlink_table_tun_priority          101
+#define network_netlink_table_tun_id                100
 
 extern network_netlink_t * network_netlink_gen(uint32_t subscriptions);
 
