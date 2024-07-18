@@ -106,11 +106,32 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
         uint8_t all[4] = { 0, 0, 0, 0 };
         uint8_t addr[4] = { 10, 0, 0, 1 };
 
-        // REMOVE MEMORY ALLOCATION ...
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_add_gen(AF_INET, addr, 24, "tun0")));
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0")));
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr)));
+        // DEFAULT ROUTE GET
 
+        // REMOVE MEMORY ALLOCATION ...
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_get_gen()));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_add_gen(AF_INET, addr, 24, "tun0")));
+        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0")));
+        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(1, 100)));
+
+        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(100)));
+        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr)));
+
+// default via 172.24.128.1 dev eth0
+// 172.24.128.0/20 dev eth0 proto kernel scope link src 172.24.135.108
+
+        // int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+        // struct sockaddr_in client;
+// https://stackoverflow.com/questions/38606036/how-does-android-vpnservice-protect-fd-work
+// https://yahon.tistory.com/175
+// https://datahacker.blog/industry/technology-menu/networking/iptables/follow-the-ip-rules
+// https://www.reddit.com/r/WireGuard/comments/w20fx8/using_fwmark_instead_of_ip_rules_for_applying/
+// https://www.reddit.com/r/WireGuard/comments/w20fx8/using_fwmark_instead_of_ip_rules_for_applying/
+/*
+Set the mark for each packet sent through this socket (similar to the netfilter MARK target but socket-based).
+Changing the mark can be used for mark-based routing without netfilter or for packet filtering.  Setting this option requires the CAP_NET_ADMIN or CAP_NET_RAW (since Linux 5.17) capability.
+*/
 // snorlax@surface:~$ sudo ip addr add 10.0.0.1/24 dev tun0
 // snorlax@surface:~$ sudo ip link set up dev tun0
 

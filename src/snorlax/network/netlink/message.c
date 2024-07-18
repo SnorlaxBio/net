@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
+#include <linux/fib_rules.h>
 
 #include "message.h"
 
@@ -161,6 +162,18 @@ struct network_netlink_message_iproute_req {
 
 typedef struct network_netlink_message_iproute_req network_netlink_message_iproute_req_t;
 
+extern struct nlmsghdr * network_netlink_message_iproute_get_gen(void) {
+    network_netlink_message_iproute_req_t * req = (network_netlink_message_iproute_req_t *) calloc(1, sizeof(network_netlink_message_iproute_req_t));
+
+    req->header.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP | NLM_F_ACK;
+    req->header.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+    req->header.nlmsg_type = RTM_GETROUTE;
+
+    req->message.rtm_family = AF_INET;
+
+    return (struct nlmsghdr *) req;
+}
+
 extern struct nlmsghdr * network_netlink_message_iproute_prepend_gen(uint8_t * addr, uint32_t subnetmasklen, uint8_t * next) {
     network_netlink_message_iproute_req_t * req = (network_netlink_message_iproute_req_t *) calloc(1, sizeof(network_netlink_message_iproute_req_t));
 
@@ -178,10 +191,32 @@ extern struct nlmsghdr * network_netlink_message_iproute_prepend_gen(uint8_t * a
     network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, RTA_DST, addr, 4);
     network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, RTA_GATEWAY, next, 4);
 
-		// AF_INET <= addr->family = family;
-		// 4 <= addr->bytelen = af_byte_len(addr->family);
-		// -2 <= addr->bitlen = -2;
-		// addr->flags |= PREFIXLEN_SPECIFIED;
+    return (struct nlmsghdr *) req;
+}
+
+struct network_netlink_message_iprule_req {
+    struct nlmsghdr	header;
+    struct fib_rule_hdr	message;
+    char buf[1024];
+};
+
+typedef struct network_netlink_message_iprule_req network_netlink_message_iprule_req_t;
+
+extern struct nlmsghdr * network_netlink_message_iprule_add_gen(uint32_t mark, uint8_t table) {
+    network_netlink_message_iprule_req_t * req = (network_netlink_message_iprule_req_t *) calloc(1, sizeof(network_netlink_message_iprule_req_t));
+
+    req->header.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK;
+    req->header.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+    req->header.nlmsg_type = RTM_NEWRULE;
+
+    req->message.family = AF_INET;
+    req->message.action = FR_ACT_TO_TBL;
+    req->message.src_len = 0;
+    req->message.table = table;
+
+    uint8_t addr[4] = { 0, 0, 0, 0 };
+    network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, FRA_SRC, addr, 4);
+    network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_FWMARK, mark);
 
     return (struct nlmsghdr *) req;
 }
