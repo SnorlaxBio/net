@@ -13,5 +13,6 @@
 #define network_netlink_message_state_none          (0x00000000u <<  0u)
 #define network_netlink_message_state_req           (0x00000001u <<  0u)
 #define network_netlink_message_state_res           (0x00000001u <<  1u)
+#define network_netlink_message_state_done          (0x00000001u <<  2u)
 
 #endif // __SNORLAX__NETWORK_NETLINK_MESSAGE_STATE__H__

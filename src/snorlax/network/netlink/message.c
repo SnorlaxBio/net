@@ -202,7 +202,7 @@ struct network_netlink_message_iprule_req {
 
 typedef struct network_netlink_message_iprule_req network_netlink_message_iprule_req_t;
 
-extern struct nlmsghdr * network_netlink_message_iprule_add_gen(uint32_t mark, uint8_t table) {
+extern struct nlmsghdr * network_netlink_message_iprule_add_gen(uint32_t mark, uint32_t priority, uint8_t table) {
     network_netlink_message_iprule_req_t * req = (network_netlink_message_iprule_req_t *) calloc(1, sizeof(network_netlink_message_iprule_req_t));
 
     req->header.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | NLM_F_ACK;
@@ -217,6 +217,7 @@ extern struct nlmsghdr * network_netlink_message_iprule_add_gen(uint32_t mark, u
     uint8_t addr[4] = { 0, 0, 0, 0 };
     network_netlink_message_rtattr_object_add((struct nlmsghdr *) req, FRA_SRC, addr, 4);
     network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_FWMARK, mark);
+    network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_PRIORITY, priority);
 
     return (struct nlmsghdr *) req;
 }

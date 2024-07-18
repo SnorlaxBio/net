@@ -13,6 +13,7 @@
 
 #include "netlink.h"
 #include "netlink/message.h"
+#include "netlink/message/request.h"
 #include "netlink/message/state.h"
 
 static const int socket_buffer_size_out = 32768;
@@ -26,8 +27,8 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 static int64_t network_netlink_func_write(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_close(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_check(___notnull network_netlink_t * descriptor, uint32_t state);
-static network_netlink_message_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message);
-static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_t * request);
+static network_netlink_message_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message, network_netlink_message_request_on_t on);
+static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_request_t * request);
 
 static network_netlink_func_t func = {
     network_netlink_func_rem,
@@ -160,9 +161,9 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
                     buffer_list_push(in, (buffer_list_node_t *) node);
                     in->back = (buffer_list_node_t *) node;
                     if(message->nlmsg_type == NLMSG_ERROR){
-                        node->status = node->status | network_netlink_message_state_res;
+                        node->status = node->status | network_netlink_message_state_done;
                     } else if(message->nlmsg_flags & NLM_F_MULTI && message->nlmsg_type == NLMSG_DONE) {
-                        node->status = node->status | network_netlink_message_state_res;
+                        node->status = node->status | network_netlink_message_state_done;
                     }
                 }
             } else if(n == 0) {
@@ -216,7 +217,7 @@ static int64_t network_netlink_func_write(___notnull network_netlink_t * descrip
 
             for(network_netlink_message_t * node = (network_netlink_message_t *) out->front; node != nil; node = node->next) {
 #ifndef   RELEASE
-                netlink_protocol_debug(stdout, node->message);
+                // netlink_protocol_debug(stdout, node->message);
 #endif // RELEASE
                 struct iovec iov = { node->message, node->message->nlmsg_len };
                 struct msghdr msg = { &addr, sizeof(addr), &iov, 1, NULL, 0, 0 };
@@ -294,13 +295,13 @@ static int32_t network_netlink_func_check(___notnull network_netlink_t * descrip
     return true;
 }
 
-static network_netlink_message_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message) {
+static network_netlink_message_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message, network_netlink_message_request_on_t on) {
 #ifndef   RELEASE
     snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(message == nil, false, "critical", ""); 
 #endif // RELEASE
 
-    network_netlink_message_t * node = network_netlink_message_gen(nil);
+    network_netlink_message_request_t * node = network_netlink_message_request_gen(nil, on);
 
     node->message = message;
 
@@ -315,7 +316,7 @@ static network_netlink_message_t * network_netlink_func_req(___notnull network_n
     return node;
 }
 
-static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_t * request) {
+static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_request_t * request) {
 #ifndef   RELEASE
     snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(request == nil, false, "critical", "");
@@ -353,16 +354,25 @@ static int32_t network_netlink_func_wait(___notnull network_netlink_t * descript
                 }
                 if(fds[i].revents & POLLIN) {
                     network_netlink_read(descriptor);
-                    for(network_netlink_message_t * node = (network_netlink_message_t *) in->tail; node != nil; node = node->prev) {
+                    for(network_netlink_message_t * node = (network_netlink_message_t *) in->head; node != nil; ) {
                         if(request->message->nlmsg_seq == node->message->nlmsg_seq) {
 #ifndef   RELEASE
-                            netlink_protocol_debug(stdout, node->message);
+                            // netlink_protocol_debug(stdout, node->message);
 #endif // RELEASE
+                            
+                            network_netlink_message_t * response = node;
+                            node = node->next;
 
-                            if(node->status & network_netlink_message_state_res) {
+                            buffer_list_del(in, (buffer_list_node_t *) response);
+                            buffer_list_push(request->responses, (buffer_list_node_t *) response);
+
+                            if(response->status & network_netlink_message_state_done) {
 #ifndef   RELEASE
                                 snorlaxdbg(false, true, "response", "");
 #endif // RELEASE
+                                if(request->on) {
+                                    request->on(request, network_netlink_message_state_done);
+                                }
                                 return success;
                             }
                         }
@@ -442,5 +452,69 @@ extern void netlink_protocol_debug(FILE * stream, void * data) {
 #endif // RELEASE
             }
         }
-    }    
+    } else if(header->nlmsg_type == RTM_GETROUTE) {
+        struct rtmsg * message = (struct rtmsg *) NLMSG_DATA(header);
+
+        fprintf(stream, "message->rtm_family => %d\n", message->rtm_family);
+        fprintf(stream, "message->rtm_dst_len => %d\n", message->rtm_dst_len);
+        fprintf(stream, "message->rtm_src_len => %d\n", message->rtm_src_len);
+        fprintf(stream, "message->rtm_tos => %d\n", message->rtm_tos);
+        fprintf(stream, "message->rtm_table => %d\n", message->rtm_table);
+        fprintf(stream, "message->rtm_protocol => %d\n", message->rtm_protocol);
+        fprintf(stream, "message->rtm_scope => %d\n", message->rtm_scope);
+        fprintf(stream, "message->rtm_type => %d\n", message->rtm_type);
+        fprintf(stream, "message->rtm_flags => %d\n", message->rtm_flags);
+        fprintf(stream, "sizeof(struct rtmsg) => %d\n", sizeof(struct rtmsg));
+        fprintf(stream, "sizeof(struct nlmsghdr) => %d\n", sizeof(struct nlmsghdr));
+
+        for(struct rtattr * attr = netlink_protocol_data_get(struct rtattr *, message, sizeof(struct rtmsg)); (void *) attr < netlink_protocol_data_end(header); attr = netlink_protocol_attr_next(attr)) {
+            fprintf(stream, "%p\n", attr);
+            fprintf(stream, "%p\n", netlink_protocol_data_end(header));
+            fprintf(stream, "attr->rta_type => %d\n", attr->rta_type);
+            fprintf(stream, "attr->rta_len => %d\n", attr->rta_len);
+        }
+    } else if(header->nlmsg_type == RTM_NEWROUTE) {
+        struct rtmsg * message = (struct rtmsg *) NLMSG_DATA(header);
+
+        fprintf(stream, "message->rtm_family => %d\n", message->rtm_family);
+        fprintf(stream, "message->rtm_dst_len => %d\n", message->rtm_dst_len);
+        fprintf(stream, "message->rtm_src_len => %d\n", message->rtm_src_len);
+        fprintf(stream, "message->rtm_tos => %d\n", message->rtm_tos);
+        fprintf(stream, "message->rtm_table => %d\n", message->rtm_table);
+        fprintf(stream, "message->rtm_protocol => %d\n", message->rtm_protocol);
+        fprintf(stream, "message->rtm_scope => %d\n", message->rtm_scope);
+        fprintf(stream, "message->rtm_type => %d\n", message->rtm_type);
+        fprintf(stream, "message->rtm_flags => %d\n", message->rtm_flags);
+        fprintf(stream, "sizeof(struct rtmsg) => %d\n", sizeof(struct rtmsg));
+        fprintf(stream, "sizeof(struct nlmsghdr) => %d\n", sizeof(struct nlmsghdr));
+
+        for(struct rtattr * attr = netlink_protocol_data_get(struct rtattr *, message, sizeof(struct rtmsg)); (void *) attr < netlink_protocol_data_end(header); attr = netlink_protocol_attr_next(attr)) {
+            fprintf(stream, "attr->rta_type => %d\n", attr->rta_type);
+            fprintf(stream, "attr->rta_len => %d\n", attr->rta_len);
+
+            if(attr->rta_type == RTA_TABLE) {
+                uint32_t * value = (uint32_t *) RTA_DATA(attr);
+                fprintf(stream, "table => %u\n", *value);
+            } else if(attr->rta_type == RTA_GATEWAY) {
+                uint8_t * value = (uint8_t *) RTA_DATA(attr);
+                fprintf(stream, "gateway => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
+            } else if(attr->rta_type == RTA_OIF) {
+                uint32_t * value = (uint32_t *) RTA_DATA(attr);
+                fprintf(stream, "oif => %u\n", *value);
+            } else if(attr->rta_type == RTA_DST) {
+                uint8_t * value = (uint8_t *) RTA_DATA(attr);
+                fprintf(stream, "destination => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
+            } else if(attr->rta_type == RTA_METRICS) {
+                uint32_t * value = (uint32_t *) RTA_DATA(attr);
+                fprintf(stream, "metrics => %u\n", *value);
+            } else if(attr->rta_type == RTA_PREFSRC) {
+                uint8_t * value = (uint8_t *) RTA_DATA(attr);
+                fprintf(stream, "prefsrc => %d.%d.%d.%d\n", value[0], value[1], value[2], value[3]);
+            } else {
+#ifndef   RELEASE
+                snorlaxdbg(true, false, "critical", "");
+#endif // RELEASE
+            }
+        }
+    }
 }

@@ -16,6 +16,7 @@
 
 #include "netlink.h"
 #include "netlink/message.h"
+#include "netlink/message/response.h"
 
 typedef network_tun_t * (*network_tun_func_rem_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_open_t)(___notnull network_tun_t *);
@@ -109,13 +110,11 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
         // DEFAULT ROUTE GET
 
         // REMOVE MEMORY ALLOCATION ...
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_get_gen()));
-        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_add_gen(AF_INET, addr, 24, "tun0")));
-        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0")));
-        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(1, 100)));
-
-        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(100)));
-        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr)));
+        // network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_get_gen(), network_netlink_message_response_debug));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_ipaddr_add_gen(AF_INET, addr, 24, "tun0"), nil));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iplink_setup_gen("tun0"), nil));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(1, 100, network_netlink_table_main_id), nil));
+        network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr), nil));
 
 // default via 172.24.128.1 dev eth0
 // 172.24.128.0/20 dev eth0 proto kernel scope link src 172.24.135.108
