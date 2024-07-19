@@ -121,6 +121,8 @@ static int32_t network_netlink_func_open(___notnull network_netlink_t * descript
         descriptor_nonblock_on((descriptor_t *) descriptor);
 
         descriptor->status = descriptor->status | (descriptor_state_open | descriptor_state_write);
+        descriptor->status = descriptor->status & (~descriptor_state_close);
+        
     } else {
 #ifndef   RELEASE
         snorlaxdbg(false, true, "caution", "");
