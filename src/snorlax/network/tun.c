@@ -142,7 +142,6 @@ static int32_t network_tun_func_project(___notnull network_tun_t * descriptor, _
     if(s->value > invalid) {
         int mark = network_netlink_table_main_mark;
         if(setsockopt(s->value, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) == 0) {
-            printf("A\n");
             return success;
         }
 #ifndef   RELEASE

@@ -11,6 +11,4 @@ extern void network_netlink_message_response_debug(network_netlink_message_reque
     for(network_netlink_message_t * node = (network_netlink_message_t *) request->responses->head; node != nil; node = node->next) {
         netlink_protocol_debug(stdout, node->message);
     }
-
-    printf("request state => %x\n", state);
 }

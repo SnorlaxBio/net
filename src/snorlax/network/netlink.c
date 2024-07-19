@@ -137,8 +137,6 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
     snorlaxdbg(descriptor == nil, false, "critical", "");
 #endif // RELEASE
 
-    printf("network netlink read\n");
-
     if(descriptor->value > invalid) {
         if(descriptor->status & descriptor_state_open_in) {
             buffer_list_t * in = descriptor->buffer.in;
@@ -193,7 +191,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
                     descriptor_exception_set(descriptor, descriptor_exception_type_system, errno, recvmsg);
                 }
             }
-            printf("netlink read => %ld\n", n);
+
             return n;
         } else {
 #ifndef   RELEASE

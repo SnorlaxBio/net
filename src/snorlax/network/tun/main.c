@@ -17,7 +17,6 @@ static void openOn(descriptor_event_subscription_t * subscription, uint32_t type
 }
 
 static void readOn(descriptor_event_subscription_t * subscription, uint32_t type, event_subscription_event_t * node) {
-    printf("read\n");
     buffer_t * in = snorlax_eva_descriptor_event_subscription_buffer_in_get(subscription);
 
     while(buffer_length(in) > 0) {
