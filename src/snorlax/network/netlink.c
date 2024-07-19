@@ -155,13 +155,11 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 
             int64_t n = recvmsg(descriptor->value, &msg, 0);
 
-            printf("recvmsg => %ld\n", sizeof(buffer));
-            printf("recvmsg => %ld\n", n);
-
             if(n > 0) {
+                int64_t len = n;
                 descriptor->status = descriptor->status | descriptor_state_read;
 
-                for(struct nlmsghdr * message = (struct nlmsghdr *) buffer; NLMSG_OK(message, n); message = NLMSG_NEXT(message, n)) {
+                for(struct nlmsghdr * message = (struct nlmsghdr *) buffer; NLMSG_OK(message, len); message = NLMSG_NEXT(message, len)) {
                     network_netlink_message_t * node = network_netlink_message_gen(message);
                     buffer_list_push(in, (buffer_list_node_t *) node);
                     in->back = (buffer_list_node_t *) node;
