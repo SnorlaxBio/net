@@ -109,6 +109,7 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
 
         descriptor_nonblock_on((descriptor_t *) descriptor);
 
+#if 0
         uint8_t all[4] = { 0, 0, 0, 0 };
         uint8_t addr[4] = { 10, 0, 0, 1 };
 
@@ -121,6 +122,7 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(network_netlink_table_main_mark, network_netlink_table_main_priority, network_netlink_table_main_id), nil));
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iprule_add_gen(network_netlink_table_tun_mark, network_netlink_table_tun_priority, network_netlink_table_tun_id), nil));
         network_netlink_wait(network_netlink_get(), network_netlink_req(network_netlink_get(), network_netlink_message_iproute_prepend_gen(all, 0, addr, network_netlink_table_tun_id), nil));
+#endif // 0
 
     } else {
 #ifndef   RELEASE
