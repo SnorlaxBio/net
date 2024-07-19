@@ -186,7 +186,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
                     descriptor_exception_set(descriptor, descriptor_exception_type_system, errno, recvmsg);
                 }
             }
-
+            printf("netlink read => %ld\n", n);
             return n;
         } else {
 #ifndef   RELEASE
