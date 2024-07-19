@@ -9,6 +9,7 @@
 #include <linux/fib_rules.h>
 
 #include "message.h"
+#include "message/state.h"
 
 static uint8_t * network_ipaddr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint32_t * out);
 
@@ -24,9 +25,11 @@ static uint8_t * network_ipaddr_to_broadcast(uint8_t * in, uint32_t len, uint32_
 }
 
 static network_netlink_message_t * network_netlink_message_func_rem(network_netlink_message_t * message);
+static int32_t network_netlink_message_func_done(network_netlink_message_t * message);
 
 static network_netlink_message_func_t func = {
-    network_netlink_message_func_rem
+    network_netlink_message_func_rem,
+    network_netlink_message_func_done
 };
 
 extern network_netlink_message_t * network_netlink_message_gen(struct nlmsghdr * nlmsg) {
@@ -52,6 +55,10 @@ static network_netlink_message_t * network_netlink_message_func_rem(network_netl
     free(message);
 
     return nil;
+}
+
+static int32_t network_netlink_message_func_done(network_netlink_message_t * message) {
+    return message->status & network_netlink_message_state_done ? true : false;
 }
 
 extern void network_netlink_message_rtattr_object_add(struct nlmsghdr * req, uint16_t type, const uint8_t * data, uint32_t len) {

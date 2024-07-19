@@ -34,6 +34,7 @@ struct network_netlink_message {
 
 struct network_netlink_message_func {
     network_netlink_message_t * (*rem)(network_netlink_message_t *);
+    int32_t (*done)(network_netlink_message_t *);
 };
 
 extern network_netlink_message_t * network_netlink_message_gen(struct nlmsghdr * nlmsg);
