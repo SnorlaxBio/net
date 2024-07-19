@@ -155,6 +155,9 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 
             int64_t n = recvmsg(descriptor->value, &msg, 0);
 
+            printf("recvmsg => %ld\n", sizeof(buffer));
+            printf("recvmsg => %ld\n", n);
+
             if(n > 0) {
                 descriptor->status = descriptor->status | descriptor_state_read;
 
