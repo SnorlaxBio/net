@@ -179,6 +179,9 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 
                 n = fail;
             } else {
+#ifndef   RELEASE
+                snorlaxdbg(false, true, "warning", "");
+#endif // RELEASE
                 descriptor->status = descriptor->status & (~descriptor_state_read);
 
                 if(errno == EAGAIN) {

@@ -1,9 +1,13 @@
 #include "request.h"
 
+#include "state.h"
+
 static network_netlink_message_request_t * network_netlink_message_request_func_rem(network_netlink_message_request_t * request);
+static int32_t network_netlink_message_request_func_done(network_netlink_message_request_t * request);
 
 static network_netlink_message_request_func_t func = {
-    network_netlink_message_request_func_rem
+    network_netlink_message_request_func_rem,
+    network_netlink_message_request_func_done
 };
 
 extern network_netlink_message_request_t * network_netlink_message_request_gen(struct nlmsghdr * nlmsg, network_netlink_message_request_on_t on) {
@@ -33,4 +37,8 @@ static network_netlink_message_request_t * network_netlink_message_request_func_
     free(request);
 
     return nil;
+}
+
+static int32_t network_netlink_message_request_func_done(network_netlink_message_request_t * request) {
+    return (request->status & network_netlink_message_state_done) ? true : false;
 }

@@ -39,6 +39,7 @@ struct network_netlink_message_request {
 
 struct network_netlink_message_request_func {
     network_netlink_message_request_t * (*rem)(network_netlink_message_request_t *);
+    int32_t (*done)(network_netlink_message_request_t *);
 };
 
 extern network_netlink_message_request_t * network_netlink_message_request_gen(struct nlmsghdr * nlmsg, network_netlink_message_request_on_t on);
