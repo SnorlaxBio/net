@@ -87,3 +87,7 @@ add_executable(snorlax-network-tun  ${SNORLAX_NET_SOURCE}
                                     src/snorlax/network/tun/main.c)
 target_compile_options(snorlax-network-tun PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 target_link_libraries(snorlax-network-tun libsnorlax-eva.a libsnorlax-protocol.a libsnorlax-std.a)
+
+install(TARGETS snorlax-std ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
+                  FILES_MATCHING PATTERN "*.h")
