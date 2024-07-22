@@ -49,7 +49,7 @@ struct network_netlink_request_func {
     void (*clear)(network_netlink_request_t *);   
 };
 
-extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg);
+extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n);
 
 #define network_netlink_request_rem(message)                    ((message)->func->rem(message))
 #define network_netlink_request_front(message)                  ((message)->func->front(message))

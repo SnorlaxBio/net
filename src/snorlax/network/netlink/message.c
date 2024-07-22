@@ -40,7 +40,7 @@ static network_netlink_message_func_t func = {
     (network_netlink_message_func_clear_t) buffer_list_node_func_clear
 };
 
-extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg) {
+extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n) {
     network_netlink_message_t * node = (network_netlink_message_t *) calloc(1, sizeof(network_netlink_message_t));
 
     node->func = address_of(func);
@@ -53,6 +53,9 @@ extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * b
         node->capacity = nlmsg->nlmsg_len;
         node->size = nlmsg->nlmsg_len;
         node->message = nlmsg;
+    } else if(n > 0) {
+        node->capacity = n;
+        node->message = (struct nlmsghdr *) malloc(n);
     }
 
     return node;

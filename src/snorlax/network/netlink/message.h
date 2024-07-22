@@ -49,7 +49,7 @@ struct network_netlink_message_func {
     void (*clear)(network_netlink_message_t *);
 };
 
-extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg);
+extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n);
 
 #define network_netlink_message_rem(message)                    ((message)->func->rem(message))
 #define network_netlink_message_front(message)                  ((message)->func->front(message))
