@@ -71,16 +71,13 @@ set(SNORLAX_NET_SOURCE      src/snorlax/network.c
                             src/snorlax/network/tun.c
                             src/snorlax/network/netlink.c
                             src/snorlax/network/netlink/message.c
-                            src/snorlax/network/netlink/message/request.c
-                            src/snorlax/network/netlink/message/response.c)
+                            src/snorlax/network/netlink/request.c)
 set(SNORLAX_NET_HEADER      src/snorlax/network.h
                             src/snorlax/network/ip/addr.h
                             src/snorlax/network/tun.h
                             src/snorlax/network/netlink.h
                             src/snorlax/network/netlink/message.h
-                            src/snorlax/network/netlink/message/request.h
-                            src/snorlax/network/netlink/message/response.h
-                            src/snorlax/network/netlink/message/state.h)
+                            src/snorlax/network/netlink/request.h)
 
 add_library(snorlax-net             ${SNORLAX_NET_SOURCE}
                                     ${SNORLAX_NET_HEADER})

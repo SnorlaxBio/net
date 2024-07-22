@@ -19,14 +19,14 @@ static void openOn(descriptor_event_subscription_t * subscription, uint32_t type
 static void readOn(descriptor_event_subscription_t * subscription, uint32_t type, event_subscription_event_t * node) {
     buffer_t * in = snorlax_eva_descriptor_event_subscription_buffer_in_get(subscription);
 
-    while(buffer_length(in) > 0) {
+    while(buffer_node_length(buffer_front(in)) > 0) {
         // uint8_t * datagram = buffer_front(in);
 
         // internet_protocol_debug(stdout, datagram);
 
         // uint32_t n = internet_protocol_length_get(datagram);
 
-        buffer_position_set(in, buffer_position_get(in) + buffer_length(in));
+        buffer_node_position_set(buffer_front(in), buffer_node_position_get(buffer_front(in)) + buffer_node_length(buffer_front(in)));
     }
 
     printf("hello packet end\n");

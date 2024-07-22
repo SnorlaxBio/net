@@ -16,7 +16,7 @@
 #include <snorlax/buffer/list.h>
 #include <snorlax/descriptor.h>
 #include <snorlax/network/netlink/message.h>
-#include <snorlax/network/netlink/message/request.h>
+#include <snorlax/network/netlink/request.h>
 
 struct network_netlink;
 struct network_netlink_func;
@@ -55,8 +55,10 @@ struct network_netlink_func {
     int32_t (*close)(___notnull network_netlink_t *);
     int32_t (*check)(___notnull network_netlink_t *, uint32_t);
 
-    network_netlink_message_request_t * (*req)(___notnull network_netlink_t *, struct nlmsghdr *, network_netlink_message_request_on_t);
-    int32_t (*wait)(___notnull network_netlink_t *, ___notnull network_netlink_message_request_t *);
+    network_netlink_request_t * (*req)(___notnull network_netlink_t *, struct nlmsghdr *);
+
+    // network_netlink_message_request_t * (*req)(___notnull network_netlink_t *, struct nlmsghdr *, network_netlink_message_request_on_t);
+    // int32_t (*wait)(___notnull network_netlink_t *, ___notnull network_netlink_message_request_t *);
 };
 
 #define network_netlink_table_main_mark             1
@@ -77,8 +79,8 @@ extern network_netlink_t * network_netlink_get(void);
 #define network_netlink_write(descriptor)                           ((descriptor)->func->write(descriptor))
 #define network_netlink_close(descriptor)                           ((descriptor)->func->close(descriptor))
 #define network_netlink_check(descriptor, state)                    ((descriptor)->func->check(descriptor, state))
-#define network_netlink_req(descriptor, message, on)                ((descriptor)->func->req(descriptor, message, on))
-#define network_netlink_wait(descriptor, message)                   ((descriptor)->func->wait(descriptor, message))
+#define network_netlink_req(descriptor, message)                    ((descriptor)->func->req(descriptor, message))
+// #define network_netlink_wait(descriptor, message)                   ((descriptor)->func->wait(descriptor, message))
 
 #define netlink_protocol_data_get(type, address, len)               ((type)(((void *) address) + NLMSG_ALIGN(len)))
 #define netlink_protocol_data_end(header)                           ((((void *)(header)) + NLMSG_ALIGN(header->nlmsg_len)))

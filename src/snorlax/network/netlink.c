@@ -13,11 +13,10 @@
 
 #include "netlink.h"
 #include "netlink/message.h"
-#include "netlink/message/request.h"
-#include "netlink/message/state.h"
 
 static const int socket_buffer_size_out = 32768;
 static const int socket_buffer_size_in = 1024 * 1024;
+static const uint64_t socket_buffer_page_in = (8192/sizeof(struct nlmsghdr) * sizeof(struct nlmsghdr));
 static const int enable = 1;
 static network_netlink_t * singleton = nil;
 
@@ -27,8 +26,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 static int64_t network_netlink_func_write(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_close(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_check(___notnull network_netlink_t * descriptor, uint32_t state);
-static network_netlink_message_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message, network_netlink_message_request_on_t on);
-static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_request_t * request);
+static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message);
 
 static network_netlink_func_t func = {
     network_netlink_func_rem,
@@ -37,8 +35,7 @@ static network_netlink_func_t func = {
     network_netlink_func_write,
     network_netlink_func_close,
     network_netlink_func_check,
-    network_netlink_func_req,
-    network_netlink_func_wait
+    network_netlink_func_req
 };
 
 extern network_netlink_t * network_netlink_get(void) {
@@ -55,8 +52,8 @@ extern network_netlink_t * network_netlink_gen(uint32_t subscriptions) {
     network_netlink_t * descriptor = (network_netlink_t *) calloc(1, sizeof(network_netlink_t));
 
     descriptor->func = address_of(func);
-    descriptor->buffer.in = buffer_list_gen();
-    descriptor->buffer.out = buffer_list_gen();
+    descriptor->buffer.in = buffer_list_gen(nil, socket_buffer_page_in * 2);
+    descriptor->buffer.out = buffer_list_gen(nil, 0);
     descriptor->value = invalid;
     descriptor->status = descriptor->status | descriptor_state_close;
     descriptor->subscriptions = subscriptions;
@@ -139,41 +136,19 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 
     if(descriptor->value > invalid) {
         if(descriptor->status & descriptor_state_open_in) {
-            buffer_list_t * in = descriptor->buffer.in;
-            buffer_list_t * out = descriptor->buffer.out;
-
-            /**
-             * Need to upgrade : 현재의 버퍼는 로컬 스택에 저장하고 그것을 메시지에 담는다.
-             * 이것은 비효율적이다. memcpy 와 read 를 동시에 수행할 수 있는 버퍼 구조를 가져야 한다.
-             */
-
-            // 8192 to avoid message truncation on platforms with page size > 4096
-            struct nlmsghdr buffer[8192/sizeof(struct nlmsghdr)];
-            struct iovec iov = { buffer, sizeof(buffer) };
+            buffer_list_node_t * in = buffer_back(descriptor->buffer.in, socket_buffer_page_in);
+            struct iovec iov = { buffer_node_back(in), buffer_node_remain(in) };
             struct sockaddr_nl addr;
             struct msghdr msg = { &addr, sizeof(addr), &iov, 1, NULL, 0, 0 };
 
             int64_t n = recvmsg(descriptor->value, &msg, 0);
-
             if(n > 0) {
-                int64_t len = n;
                 descriptor->status = descriptor->status | descriptor_state_read;
 
-                for(struct nlmsghdr * message = (struct nlmsghdr *) buffer; NLMSG_OK(message, len); message = NLMSG_NEXT(message, len)) {
-                    network_netlink_message_t * node = network_netlink_message_gen(message);
-                    buffer_list_push(in, (buffer_list_node_t *) node);
-                    in->back = (buffer_list_node_t *) node;
-                    if(message->nlmsg_type == NLMSG_ERROR){
-                        node->status = node->status | network_netlink_message_state_done;
-                    } else if(message->nlmsg_flags & NLM_F_MULTI && message->nlmsg_type == NLMSG_DONE) {
-                        node->status = node->status | network_netlink_message_state_done;
-                    }
-                }
+                buffer_node_size_set(in, buffer_node_position_get(in) + n);
             } else if(n == 0) {
                 descriptor->status = descriptor->status & (~descriptor_state_read);
-#ifndef   RELEASE
-                snorlaxdbg(false, true, "warning", "");
-#endif // RELEASE
+
                 descriptor_exception_set(descriptor, descriptor_exception_type_lib, descriptor_exception_no_eof, recvmsg);
 
                 n = fail;
@@ -183,9 +158,6 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
                 if(errno == EAGAIN) {
                     n = 0;
                 } else {
-#ifndef   RELEASE
-                    snorlaxdbg(false, true, "descriptor exception", "%d %d %p", descriptor_exception_type_system, errno, recvmsg);
-#endif // RELEASE
                     descriptor_exception_set(descriptor, descriptor_exception_type_system, errno, recvmsg);
                 }
             }
@@ -212,49 +184,44 @@ static int64_t network_netlink_func_write(___notnull network_netlink_t * descrip
 
     if(descriptor->value > invalid) {
         if(descriptor->status & descriptor_state_open_out) {
-            buffer_list_t * out = descriptor->buffer.out;
+            buffer_list_node_t * node = nil;
+
             struct sockaddr_nl addr;
-            memset(&addr, 0, sizeof(addr));
+            memset(&addr, 0, sizeof(struct sockaddr_nl));
             addr.nl_family = AF_NETLINK;
-
-
-            for(network_netlink_message_t * node = (network_netlink_message_t *) out->front; node != nil; node = node->next) {
-#ifndef   RELEASE
-                // netlink_protocol_debug(stdout, node->message);
-#endif // RELEASE
-                struct iovec iov = { node->message, node->message->nlmsg_len };
+            
+            while(node = buffer_front(descriptor->buffer.out)) {
+                struct nlmsghdr * message = buffer_node_front(node);
+                struct iovec iov = { message, message->nlmsg_len };
                 struct msghdr msg = { &addr, sizeof(addr), &iov, 1, NULL, 0, 0 };
-                node->message->nlmsg_flags = node->message->nlmsg_flags | NLM_F_ACK;
-                node->message->nlmsg_pid = 0;
-                node->message->nlmsg_seq = (++descriptor->seq);
 
                 int64_t n = sendmsg(descriptor->value, &msg, 0);
 
                 if(n > 0) {
-#ifndef   RELEASE
-                    snorlaxdbg(n != node->message->nlmsg_len, false, "critical", "");
-#endif // RELEASE
-                    node->status = node->status | network_netlink_message_state_req;
+                    buffer_node_position_set(node, buffer_node_position_get(node) + n);
+
                     descriptor->status = descriptor->status | descriptor_state_write;
-                    out->front = (buffer_list_node_t *) node->next;
+
                     continue;
                 } else if(n == 0) {
                     descriptor->status = descriptor->status & (~descriptor_state_write);
 
 #ifndef   RELEASE
-                    snorlaxdbg(n == 0, true, "critical", "");
+                    snorlaxdbg(false, true, "check", "");
 #endif // RELEASE
-                    return fail;
                 } else {
                     descriptor->status = descriptor->status & (~descriptor_state_write);
 
                     if(errno == EAGAIN) {
-                        return success;
+                        n = 0;
                     } else {
                         descriptor_exception_set(descriptor, descriptor_exception_type_system, errno, sendmsg);
                     }
                 }
+
+                return n;
             }
+
             return success;
         } else {
 #ifndef   RELEASE
@@ -266,6 +233,8 @@ static int64_t network_netlink_func_write(___notnull network_netlink_t * descrip
         snorlaxdbg(false, true, "warning", "");
 #endif // RELEASE
     }
+
+    return fail;
 }
 
 static int32_t network_netlink_func_close(___notnull network_netlink_t * descriptor) {
@@ -298,101 +267,115 @@ static int32_t network_netlink_func_check(___notnull network_netlink_t * descrip
     return true;
 }
 
-static network_netlink_message_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message, network_netlink_message_request_on_t on) {
+static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message) {
 #ifndef   RELEASE
     snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(message == nil, false, "critical", ""); 
 #endif // RELEASE
 
-    network_netlink_message_request_t * node = network_netlink_message_request_gen(nil, on);
-
-    node->message = message;
-
-    buffer_list_push(descriptor->buffer.out, (buffer_list_node_t *) node);
-
-    if(descriptor->buffer.out->front == nil) descriptor->buffer.out->front = (buffer_list_node_t *) node;
+    network_netlink_request_t * node = network_netlink_request_gen(descriptor->buffer.out, message);
 
     network_netlink_write(descriptor);
-
-    // TODO: ERROR HANDLING
 
     return node;
 }
 
-static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_request_t * request) {
-#ifndef   RELEASE
-    snorlaxdbg(descriptor == nil, false, "critical", "");
-    snorlaxdbg(request == nil, false, "critical", "");
-#endif // RELEASE
 
-    if(descriptor->value > invalid) {
-        struct pollfd fds[1];
-        buffer_list_t * in = descriptor->buffer.in;
-        buffer_list_t * out = descriptor->buffer.out;
-        network_netlink_write(descriptor);
+// static network_netlink_message_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message) {
+// #ifndef   RELEASE
+//     snorlaxdbg(descriptor == nil, false, "critical", "");
+//     snorlaxdbg(message == nil, false, "critical", ""); 
+// #endif // RELEASE
 
-        // ERROR HANDLING
+//     network_netlink_message_request_t * node = network_netlink_message_request_gen(nil, on);
 
-        while(descriptor_exception_get(descriptor) == nil) {
-            fds[0].fd = descriptor->value;
-            fds[0].events = (POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL);
-            if(out->front) fds[0].events = fds[0].events | POLLOUT;
-            fds[0].revents = 0;
+//     node->message = message;
 
-            int n = poll(fds, 1, 1);
+//     buffer_list_push(descriptor->buffer.out, (buffer_list_node_t *) node);
 
-            for(int i = 0; i < n; i++) {
-                if(fds[i].revents & (POLLPRI | POLLERR | POLLHUP | POLLNVAL)) {
-                    int error = 0;
-                    socklen_t errorlen = sizeof(error);
-                    if(getsockopt(descriptor->value, SOL_SOCKET, SO_ERROR, &error, &errorlen) >= 0) {
-                        descriptor_exception_set(descriptor, descriptor_exception_type_system, error, poll);
-                    } else {
-                        descriptor_exception_set(descriptor, descriptor_exception_type_system, fds[i].revents, poll);
-                    }
-                    break;
-                }
-                if(fds[i].revents & POLLOUT) {
-                    network_netlink_write(descriptor);
-                }
-                if(fds[i].revents & POLLIN) {
-                    network_netlink_read(descriptor);
-                    for(network_netlink_message_t * node = (network_netlink_message_t *) in->head; node != nil; ) {
-                        if(request->message->nlmsg_seq == node->message->nlmsg_seq) {
-#ifndef   RELEASE
-                            // netlink_protocol_debug(stdout, node->message);
-#endif // RELEASE
+//     if(descriptor->buffer.out->front == nil) descriptor->buffer.out->front = (buffer_list_node_t *) node;
+
+//     network_netlink_write(descriptor);
+
+//     // TODO: ERROR HANDLING
+
+//     return node;
+// }
+
+// static int32_t network_netlink_func_wait(___notnull network_netlink_t * descriptor, ___notnull network_netlink_message_request_t * request) {
+// #ifndef   RELEASE
+//     snorlaxdbg(descriptor == nil, false, "critical", "");
+//     snorlaxdbg(request == nil, false, "critical", "");
+// #endif // RELEASE
+
+//     if(descriptor->value > invalid) {
+//         struct pollfd fds[1];
+//         buffer_list_t * in = descriptor->buffer.in;
+//         buffer_list_t * out = descriptor->buffer.out;
+//         network_netlink_write(descriptor);
+
+//         // ERROR HANDLING
+
+//         while(descriptor_exception_get(descriptor) == nil) {
+//             fds[0].fd = descriptor->value;
+//             fds[0].events = (POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL);
+//             if(out->front) fds[0].events = fds[0].events | POLLOUT;
+//             fds[0].revents = 0;
+
+//             int n = poll(fds, 1, 1);
+
+//             for(int i = 0; i < n; i++) {
+//                 if(fds[i].revents & (POLLPRI | POLLERR | POLLHUP | POLLNVAL)) {
+//                     int error = 0;
+//                     socklen_t errorlen = sizeof(error);
+//                     if(getsockopt(descriptor->value, SOL_SOCKET, SO_ERROR, &error, &errorlen) >= 0) {
+//                         descriptor_exception_set(descriptor, descriptor_exception_type_system, error, poll);
+//                     } else {
+//                         descriptor_exception_set(descriptor, descriptor_exception_type_system, fds[i].revents, poll);
+//                     }
+//                     break;
+//                 }
+//                 if(fds[i].revents & POLLOUT) {
+//                     network_netlink_write(descriptor);
+//                 }
+//                 if(fds[i].revents & POLLIN) {
+//                     network_netlink_read(descriptor);
+//                     for(network_netlink_message_t * node = (network_netlink_message_t *) in->head; node != nil; ) {
+//                         if(request->message->nlmsg_seq == node->message->nlmsg_seq) {
+// #ifndef   RELEASE
+//                             // netlink_protocol_debug(stdout, node->message);
+// #endif // RELEASE
                             
-                            network_netlink_message_t * response = node;
-                            node = node->next;
+//                             network_netlink_message_t * response = node;
+//                             node = node->next;
 
-                            buffer_list_del(in, (buffer_list_node_t *) response);
-                            buffer_list_push(request->responses, (buffer_list_node_t *) response);
+//                             buffer_list_del(in, (buffer_list_node_t *) response);
+//                             buffer_list_push(request->responses, (buffer_list_node_t *) response);
 
-                            if(response->status & network_netlink_message_state_done) {
-#ifndef   RELEASE
-                                snorlaxdbg(false, true, "response", "");
-#endif // RELEASE
-                                if(request->on) {
-                                    request->on(request, network_netlink_message_state_done);
-                                }
-                                return success;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+//                             if(response->status & network_netlink_message_state_done) {
+// #ifndef   RELEASE
+//                                 snorlaxdbg(false, true, "response", "");
+// #endif // RELEASE
+//                                 if(request->on) {
+//                                     request->on(request, network_netlink_message_state_done);
+//                                 }
+//                                 return success;
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
 
 
-    } else {
-#ifndef   RELEASE
-        snorlaxdbg(descriptor->value <= invalid, false, "critical", "");
-#endif // RELEASE
-    }
+//     } else {
+// #ifndef   RELEASE
+//         snorlaxdbg(descriptor->value <= invalid, false, "critical", "");
+// #endif // RELEASE
+//     }
 
-    return fail;
-}
+//     return fail;
+// }
 
 extern void netlink_protocol_debug(FILE * stream, void * data) {
 #ifndef   RELEASE

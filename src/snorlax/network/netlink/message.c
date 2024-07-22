@@ -9,56 +9,53 @@
 #include <linux/fib_rules.h>
 
 #include "message.h"
-#include "message/state.h"
+
+typedef network_netlink_message_t * (*network_netlink_message_func_rem_t)(network_netlink_message_t *);
+typedef void * (*network_netlink_message_func_front_t)(network_netlink_message_t *);
+typedef void * (*network_netlink_message_func_back_t)(network_netlink_message_t *);
+typedef uint64_t (*network_netlink_message_func_length_t)(network_netlink_message_t *);
+typedef uint64_t (*network_netlink_message_func_remain_t)(network_netlink_message_t *);
+typedef uint64_t (*network_netlink_message_func_position_get_t)(network_netlink_message_t *);
+typedef void (*network_netlink_message_func_position_set_t)(network_netlink_message_t *, uint64_t);
+typedef uint64_t (*network_netlink_message_func_size_get_t)(network_netlink_message_t *);
+typedef void (*network_netlink_message_func_size_set_t)(network_netlink_message_t *, uint64_t);
+typedef uint64_t (*network_netlink_message_func_capacity_get_t)(network_netlink_message_t *);
+typedef void (*network_netlink_message_func_capacity_set_t)(network_netlink_message_t *, uint64_t);
+typedef void (*network_netlink_message_func_clear_t)(network_netlink_message_t *);
 
 static uint8_t * network_ipaddr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint32_t * out);
 
-static uint8_t * network_ipaddr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint32_t * out) {
-    uint32_t subnetmask = 0;
-    for(int32_t i = 0; i < subnetmasklen; i++) {
-        subnetmask |= (1 << i);
-    }
-
-    *out = ((*((uint32_t *) in)) & subnetmask) | (~subnetmask);
-
-    return (uint8_t *) out;
-}
-
-static network_netlink_message_t * network_netlink_message_func_rem(network_netlink_message_t * message);
-static int32_t network_netlink_message_func_done(network_netlink_message_t * message);
-
 static network_netlink_message_func_t func = {
-    network_netlink_message_func_rem,
-    network_netlink_message_func_done
+    (network_netlink_message_func_rem_t) buffer_list_node_func_rem,
+    (network_netlink_message_func_front_t) buffer_list_node_func_front,
+    (network_netlink_message_func_back_t) buffer_list_node_func_back,
+    (network_netlink_message_func_length_t) buffer_list_node_func_length,
+    (network_netlink_message_func_remain_t) buffer_list_node_func_remain,
+    (network_netlink_message_func_position_get_t) buffer_list_node_func_position_get,
+    (network_netlink_message_func_position_set_t) buffer_list_node_func_position_set,
+    (network_netlink_message_func_size_get_t) buffer_list_node_func_size_get,
+    (network_netlink_message_func_size_set_t) buffer_list_node_func_size_set,
+    (network_netlink_message_func_capacity_get_t) buffer_list_node_func_capacity_get,
+    (network_netlink_message_func_capacity_set_t) buffer_list_node_func_capacity_set,
+    (network_netlink_message_func_clear_t) buffer_list_node_func_clear
 };
 
-extern network_netlink_message_t * network_netlink_message_gen(struct nlmsghdr * nlmsg) {
-    network_netlink_message_t * message = (network_netlink_message_t *) calloc(1, sizeof(network_netlink_message_t));
+extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg) {
+    network_netlink_message_t * node = (network_netlink_message_t *) calloc(1, sizeof(network_netlink_message_t));
 
-    message->func = address_of(func);
+    node->func = address_of(func);
 
-    if(nlmsg) message->message = memory_dup(nlmsg, nlmsg->nlmsg_len);
+    buffer_list_add(buffer, (buffer_list_node_t *) node);
 
-    return message;
-}
+    uint64_t page = buffer->page ? buffer->page : 1;
 
-static network_netlink_message_t * network_netlink_message_func_rem(network_netlink_message_t * message) {
-#ifndef   RELEASE
-    snorlaxdbg(message == nil, false, "critical", "");
-#endif // RELEASE
+    if(nlmsg) {
+        node->capacity = nlmsg->nlmsg_len;
+        node->size = nlmsg->nlmsg_len;
+        node->message = nlmsg;
+    }
 
-    if(message->collection) buffer_list_del(message->collection, (buffer_list_node_t *) message);
-
-    message->message = memory_rem(message->message);
-    message->sync = sync_rem(message->sync);
-
-    free(message);
-
-    return nil;
-}
-
-static int32_t network_netlink_message_func_done(network_netlink_message_t * message) {
-    return message->status & network_netlink_message_state_done ? true : false;
+    return node;
 }
 
 extern void network_netlink_message_rtattr_object_add(struct nlmsghdr * req, uint16_t type, const uint8_t * data, uint32_t len) {
@@ -230,4 +227,15 @@ extern struct nlmsghdr * network_netlink_message_iprule_add_gen(uint32_t mark, u
     network_netlink_message_rtattr_uint32_add((struct nlmsghdr *) req, FRA_PRIORITY, priority);
 
     return (struct nlmsghdr *) req;
+}
+
+static uint8_t * network_ipaddr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint32_t * out) {
+    uint32_t subnetmask = 0;
+    for(int32_t i = 0; i < subnetmasklen; i++) {
+        subnetmask |= (1 << i);
+    }
+
+    *out = ((*((uint32_t *) in)) & subnetmask) | (~subnetmask);
+
+    return (uint8_t *) out;
 }

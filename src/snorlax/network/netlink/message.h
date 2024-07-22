@@ -27,17 +27,42 @@ struct network_netlink_message {
     buffer_list_t * collection;
     network_netlink_message_t * prev;
     network_netlink_message_t * next;
-
-    uint32_t status;
+    uint64_t position;
+    uint64_t size;
+    uint64_t capacity;
     struct nlmsghdr * message;
+    uint32_t status;
 };
 
 struct network_netlink_message_func {
     network_netlink_message_t * (*rem)(network_netlink_message_t *);
-    int32_t (*done)(network_netlink_message_t *);
+    void * (*front)(network_netlink_message_t *);
+    void * (*back)(network_netlink_message_t *);
+    uint64_t (*length)(network_netlink_message_t *);
+    uint64_t (*remain)(network_netlink_message_t *);
+    uint64_t (*position_get)(network_netlink_message_t *);
+    void (*position_set)(network_netlink_message_t *, uint64_t);
+    uint64_t (*size_get)(network_netlink_message_t *);
+    void (*size_set)(network_netlink_message_t *, uint64_t);
+    uint64_t (*capacity_get)(network_netlink_message_t *);
+    void (*capacity_set)(network_netlink_message_t *, uint64_t);
+    void (*clear)(network_netlink_message_t *);
 };
 
-extern network_netlink_message_t * network_netlink_message_gen(struct nlmsghdr * nlmsg);
+extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg);
+
+#define network_netlink_message_rem(message)                    ((message)->func->rem(message))
+#define network_netlink_message_front(message)                  ((message)->func->front(message))
+#define network_netlink_message_back(message)                   ((message)->func->back(message))
+#define network_netlink_message_length(message)                 ((message)->func->length(message))
+#define network_netlink_message_remain(message)                 ((message)->func->remain(message))
+#define network_netlink_message_position_get(message)           ((message)->func->position_get(message))
+#define network_netlink_message_position_set(message, v)        ((message)->func->position_set(message, v))
+#define network_netlink_message_size_get(message)               ((message)->func->size_get(message))
+#define network_netlink_message_size_set(message, v)            ((message)->func->size_set(message, v))
+#define network_netlink_message_capacity_get(message)           ((message)->func->capacity_get(message))
+#define network_netlink_message_capacity_set(message, v)        ((message)->func->capacity_set(message, v))
+#define network_netlink_message_clear(message)                  ((message)->func->clear(message))
 
 extern struct nlmsghdr * network_netlink_message_ipaddr_add_gen(uint8_t family, uint8_t * inet, uint32_t subnetmasklen, const char * dev);
 extern struct nlmsghdr * network_netlink_message_iplink_setup_gen(const char * dev);

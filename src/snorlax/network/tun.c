@@ -13,12 +13,12 @@
 #include <arpa/inet.h>
 
 #include <snorlax/socket/client.h>
+#include <snorlax/buffer/mem.h>
 
 #include "tun.h"
 
 #include "netlink.h"
 #include "netlink/message.h"
-#include "netlink/message/response.h"
 
 typedef network_tun_t * (*network_tun_func_rem_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_open_t)(___notnull network_tun_t *);
@@ -46,8 +46,8 @@ extern network_tun_t * network_tun_gen(void) {
 
     descriptor->value = invalid;
 
-    descriptor->buffer.in = buffer_gen(0);
-    descriptor->buffer.out = buffer_gen(0);
+    descriptor->buffer.in = (buffer_t *) buffer_mem_gen(0);
+    descriptor->buffer.out = (buffer_t *) buffer_mem_gen(0);
 
     descriptor->status = descriptor_state_close;
 
