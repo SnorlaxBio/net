@@ -159,6 +159,9 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
                     n = 0;
                 } else {
                     descriptor_exception_set(descriptor, descriptor_exception_type_system, errno, recvmsg);
+#ifndef   RELEASE
+                    snorlaxdbg(false, true, "exception", "descriptor_exception_type_system(recvmsg) => %d %d", descriptor->value, errno);
+#endif // RELEASE
                 }
             }
 
