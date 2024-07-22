@@ -52,8 +52,8 @@ extern network_netlink_t * network_netlink_gen(uint32_t subscriptions) {
     network_netlink_t * descriptor = (network_netlink_t *) calloc(1, sizeof(network_netlink_t));
 
     descriptor->func = address_of(func);
-    descriptor->buffer.in = buffer_list_gen(nil, socket_buffer_page_in * 2);
-    descriptor->buffer.out = buffer_list_gen(nil, 0);
+    descriptor->buffer.in = buffer_list_gen((buffer_list_node_factory_t) network_netlink_message_gen, socket_buffer_page_in * 2);
+    descriptor->buffer.out = buffer_list_gen((buffer_list_node_factory_t) network_netlink_request_gen, 0);
     descriptor->value = invalid;
     descriptor->status = descriptor->status | descriptor_state_close;
     descriptor->subscriptions = subscriptions;
