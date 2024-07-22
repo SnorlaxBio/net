@@ -82,6 +82,9 @@ extern network_netlink_t * network_netlink_get(void);
 #define network_netlink_req(descriptor, message)                    ((descriptor)->func->req(descriptor, message))
 // #define network_netlink_wait(descriptor, message)                   ((descriptor)->func->wait(descriptor, message))
 
+#define network_netlink_message_ok(message, len)                    NLMSG_OK(message, ln)
+#define network_netlink_message_next(message, len)                  NLMSG_NEXT(message, len)
+
 #define netlink_protocol_data_get(type, address, len)               ((type)(((void *) address) + NLMSG_ALIGN(len)))
 #define netlink_protocol_data_end(header)                           ((((void *)(header)) + NLMSG_ALIGN(header->nlmsg_len)))
 #define netlink_protocol_attr_next(attr)                            ((struct rtattr *)(((void *)(attr))  + RTA_ALIGN((attr)->rta_len)))
