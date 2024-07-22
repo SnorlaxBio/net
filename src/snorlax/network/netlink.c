@@ -141,7 +141,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
             struct sockaddr_nl addr;
             struct msghdr msg = { &addr, sizeof(addr), &iov, 1, NULL, 0, 0 };
 #ifndef   RELEASE
-            snorlaxdbg(false, true, "debug", "%p => %lu", buffer_node_back(in), buffer_node_remain(in));
+            // snorlaxdbg(false, true, "debug", "%p => %lu", buffer_node_back(in), buffer_node_remain(in));
 #endif // RELEASE
 
             int64_t n = recvmsg(descriptor->value, &msg, 0);
