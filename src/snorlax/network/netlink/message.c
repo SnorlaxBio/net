@@ -25,6 +25,8 @@ typedef void (*network_netlink_message_func_clear_t)(network_netlink_message_t *
 
 static uint8_t * network_ipaddr_to_broadcast(uint8_t * in, uint32_t len, uint32_t subnetmasklen, uint32_t * out);
 
+static struct nlmsghdr * network_netlink_message_func_nlmsghdr_get(network_netlink_message_t * message);
+
 static network_netlink_message_func_t func = {
     (network_netlink_message_func_rem_t) buffer_list_node_func_rem,
     (network_netlink_message_func_front_t) buffer_list_node_func_front,
@@ -37,7 +39,8 @@ static network_netlink_message_func_t func = {
     (network_netlink_message_func_size_set_t) buffer_list_node_func_size_set,
     (network_netlink_message_func_capacity_get_t) buffer_list_node_func_capacity_get,
     (network_netlink_message_func_capacity_set_t) buffer_list_node_func_capacity_set,
-    (network_netlink_message_func_clear_t) buffer_list_node_func_clear
+    (network_netlink_message_func_clear_t) buffer_list_node_func_clear,
+    network_netlink_message_func_nlmsghdr_get
 };
 
 extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n) {
@@ -59,6 +62,16 @@ extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * b
     }
 
     return node;
+}
+
+static struct nlmsghdr * network_netlink_message_func_nlmsghdr_get(network_netlink_message_t * node) {
+#ifndef   RELEASE
+    snorlaxdbg(node == nil, false, "critical", "");
+#endif // RELEASE
+
+    uint8_t * mem = (uint8_t *) node->message;
+
+    return node->size <= node->position ? nil : (struct nlmsghdr *) &mem[node->position];
 }
 
 extern void network_netlink_message_rtattr_object_add(struct nlmsghdr * req, uint16_t type, const uint8_t * data, uint32_t len) {

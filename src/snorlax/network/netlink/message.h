@@ -47,6 +47,8 @@ struct network_netlink_message_func {
     uint64_t (*capacity_get)(network_netlink_message_t *);
     void (*capacity_set)(network_netlink_message_t *, uint64_t);
     void (*clear)(network_netlink_message_t *);
+
+    struct nlmsghdr * (*nlmsghdr_get)(network_netlink_message_t *);
 };
 
 extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n);
@@ -63,6 +65,7 @@ extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * b
 #define network_netlink_message_capacity_get(message)           ((message)->func->capacity_get(message))
 #define network_netlink_message_capacity_set(message, v)        ((message)->func->capacity_set(message, v))
 #define network_netlink_message_clear(message)                  ((message)->func->clear(message))
+#define network_netlink_message_nlmsghdr_get(message)           ((message)->func->nlmsghdr_get(message))
 
 extern struct nlmsghdr * network_netlink_message_ipaddr_add_gen(uint8_t family, uint8_t * inet, uint32_t subnetmasklen, const char * dev);
 extern struct nlmsghdr * network_netlink_message_iplink_setup_gen(const char * dev);

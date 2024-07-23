@@ -32,7 +32,7 @@ struct network_netlink_request {
     uint64_t capacity;
     struct nlmsghdr * message;
     uint32_t status;
-    uint64_t response;
+    uint64_t done;
 };
 
 struct network_netlink_request_func {
@@ -47,7 +47,12 @@ struct network_netlink_request_func {
     void (*size_set)(network_netlink_request_t *, uint64_t);
     uint64_t (*capacity_get)(network_netlink_request_t *);
     void (*capacity_set)(network_netlink_request_t *, uint64_t);
-    void (*clear)(network_netlink_request_t *);   
+    void (*clear)(network_netlink_request_t *);
+
+    struct nlmsghdr * (*nlmsghdr_get)(network_netlink_request_t *);
+
+    uint64_t (*done_get)(network_netlink_request_t *);
+    void (*done_set)(network_netlink_request_t *, uint64_t);
 };
 
 extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n);
@@ -64,5 +69,8 @@ extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * b
 #define network_netlink_request_capacity_get(message)           ((message)->func->capacity_get(message))
 #define network_netlink_request_capacity_set(message, v)        ((message)->func->capacity_set(message, v))
 #define network_netlink_request_clear(message)                  ((message)->func->clear(message))
+#define network_netlink_request_nlmsghdr_get(message)           ((message)->func->nlmsghdr_get(message))
+#define network_netlink_request_done_get(message)               ((message)->func->done_get(message))
+#define network_netlink_request_done_set(message, v)            ((message)->func->done_set(message, v))
 
 #endif // __SNORLAX__NETWORK_NETLINK_REQUEST__H__
