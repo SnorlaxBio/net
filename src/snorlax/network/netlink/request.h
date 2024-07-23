@@ -15,6 +15,9 @@
 #include <snorlax.h>
 #include <snorlax/buffer/list.h>
 
+#define network_netlink_request_state_response          1
+#define network_netlink_request_state_done              2
+
 struct network_netlink_request;
 struct network_netlink_request_func;
 
