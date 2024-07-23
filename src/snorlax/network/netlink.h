@@ -15,6 +15,7 @@
 #include <snorlax.h>
 #include <snorlax/buffer/list.h>
 #include <snorlax/descriptor.h>
+#include <snorlax/socket.h>
 #include <snorlax/network/netlink/message.h>
 #include <snorlax/network/netlink/request.h>
 
@@ -55,7 +56,7 @@ struct network_netlink_func {
     int32_t (*close)(___notnull network_netlink_t *);
     int32_t (*check)(___notnull network_netlink_t *, uint32_t);
 
-    network_netlink_request_t * (*req)(___notnull network_netlink_t *, struct nlmsghdr *);
+    network_netlink_request_t * (*req)(___notnull network_netlink_t *, ___notnull socket_event_subscription_t *, struct nlmsghdr *);
 
     // network_netlink_message_request_t * (*req)(___notnull network_netlink_t *, struct nlmsghdr *, network_netlink_message_request_on_t);
     // int32_t (*wait)(___notnull network_netlink_t *, ___notnull network_netlink_message_request_t *);

@@ -10,6 +10,8 @@
 #include <poll.h>
 
 #include <snorlax/buffer/list.h>
+#include <snorlax/socket/event/subscription.h>
+#include <snorlax/event/subscription/event.h>
 
 #include "netlink.h"
 #include "netlink/message.h"
@@ -26,7 +28,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 static int64_t network_netlink_func_write(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_close(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_check(___notnull network_netlink_t * descriptor, uint32_t state);
-static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message);
+static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, ___notnull socket_event_subscription_t * subscription, struct nlmsghdr * message);
 
 static network_netlink_func_t func = {
     network_netlink_func_rem,
@@ -275,7 +277,7 @@ static int32_t network_netlink_func_check(___notnull network_netlink_t * descrip
     return true;
 }
 
-static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, struct nlmsghdr * message) {
+static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, ___notnull socket_event_subscription_t * subscription, struct nlmsghdr * message) {
 #ifndef   RELEASE
     snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(message == nil, false, "critical", ""); 
@@ -285,7 +287,11 @@ static network_netlink_request_t * network_netlink_func_req(___notnull network_n
 
     message->nlmsg_seq = (descriptor->seq = descriptor->seq + 1);
 
-    network_netlink_write(descriptor);
+    int64_t n = network_netlink_write(descriptor);
+
+    if(subscription) {
+        socket_event_subscription_notify(subscription, descriptor_event_type_write, event_subscription_event_parameter_set(nil, n));
+    }
 
     return node;
 }
