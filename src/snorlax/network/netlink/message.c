@@ -13,6 +13,7 @@
 typedef network_netlink_message_t * (*network_netlink_message_func_rem_t)(network_netlink_message_t *);
 typedef void * (*network_netlink_message_func_front_t)(network_netlink_message_t *);
 typedef void * (*network_netlink_message_func_back_t)(network_netlink_message_t *);
+typedef int32_t (*network_netlink_message_func_shrink_t)(network_netlink_message_t *);
 typedef uint64_t (*network_netlink_message_func_length_t)(network_netlink_message_t *);
 typedef uint64_t (*network_netlink_message_func_remain_t)(network_netlink_message_t *);
 typedef uint64_t (*network_netlink_message_func_position_get_t)(network_netlink_message_t *);
@@ -31,6 +32,7 @@ static network_netlink_message_func_t func = {
     (network_netlink_message_func_rem_t) buffer_list_node_func_rem,
     (network_netlink_message_func_front_t) buffer_list_node_func_front,
     (network_netlink_message_func_back_t) buffer_list_node_func_back,
+    (network_netlink_message_func_shrink_t) buffer_list_node_func_shrink,
     (network_netlink_message_func_length_t) buffer_list_node_func_length,
     (network_netlink_message_func_remain_t) buffer_list_node_func_remain,
     (network_netlink_message_func_position_get_t) buffer_list_node_func_position_get,

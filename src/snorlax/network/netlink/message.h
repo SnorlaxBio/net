@@ -38,6 +38,7 @@ struct network_netlink_message_func {
     network_netlink_message_t * (*rem)(network_netlink_message_t *);
     void * (*front)(network_netlink_message_t *);
     void * (*back)(network_netlink_message_t *);
+    int32_t (*shrink)(network_netlink_message_t *);
     uint64_t (*length)(network_netlink_message_t *);
     uint64_t (*remain)(network_netlink_message_t *);
     uint64_t (*position_get)(network_netlink_message_t *);
@@ -56,6 +57,7 @@ extern network_netlink_message_t * network_netlink_message_gen(buffer_list_t * b
 #define network_netlink_message_rem(message)                    ((message)->func->rem(message))
 #define network_netlink_message_front(message)                  ((message)->func->front(message))
 #define network_netlink_message_back(message)                   ((message)->func->back(message))
+#define network_netlink_message_shrink(message)                 ((message)->func->shrink(message))
 #define network_netlink_message_length(message)                 ((message) ? (message)->func->length(message) : 0)
 #define network_netlink_message_remain(message)                 ((message) ? (message)->func->remain(message) : 0)
 #define network_netlink_message_position_get(message)           ((message)->func->position_get(message))
