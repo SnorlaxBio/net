@@ -66,7 +66,7 @@ static int32_t network_netlink_request_func_shrink(network_netlink_request_t * n
     if(node->done == node->size) {
         buffer_list_del(node->collection, (buffer_list_node_t *) node);
         network_netlink_request_rem(node);
-        
+
         return success;
     }
 
