@@ -80,7 +80,7 @@ extern network_netlink_t * network_netlink_get(void);
 #define network_netlink_write(descriptor)                           ((descriptor)->func->write(descriptor))
 #define network_netlink_close(descriptor)                           ((descriptor)->func->close(descriptor))
 #define network_netlink_check(descriptor, state)                    ((descriptor)->func->check(descriptor, state))
-#define network_netlink_req(descriptor, message)                    ((descriptor)->func->req(descriptor, message))
+#define network_netlink_req(descriptor, subscription, message)      ((descriptor)->func->req(descriptor, subscription, message))
 // #define network_netlink_wait(descriptor, message)                   ((descriptor)->func->wait(descriptor, message))
 
 #define network_netlink_message_ok(message, len)                    NLMSG_OK(message, len)
