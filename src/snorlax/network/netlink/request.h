@@ -32,6 +32,7 @@ struct network_netlink_request {
     uint64_t capacity;
     struct nlmsghdr * message;
     uint32_t status;
+    uint64_t response;
 };
 
 struct network_netlink_request_func {

@@ -270,6 +270,8 @@ static int32_t network_netlink_func_check(___notnull network_netlink_t * descrip
     snorlaxdbg(descriptor == nil, false, "critical", "");
 #endif // RELEASE
 
+    // TODO: IMPLEMENT
+
     return true;
 }
 
@@ -280,6 +282,8 @@ static network_netlink_request_t * network_netlink_func_req(___notnull network_n
 #endif // RELEASE
 
     network_netlink_request_t * node = network_netlink_request_gen(descriptor->buffer.out, message, message->nlmsg_len);
+
+    message->nlmsg_seq = (descriptor->seq = descriptor->seq + 1);
 
     network_netlink_write(descriptor);
 
