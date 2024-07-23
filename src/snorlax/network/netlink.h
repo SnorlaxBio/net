@@ -30,6 +30,8 @@ typedef struct network_netlink_req network_netlink_req_t;
 struct network_netlink_buffer;
 typedef struct network_netlink_buffer network_netlink_buffer_t;
 
+typedef void (*network_netlink_request_callback_t)(struct nlmsghdr *, uint32_t, struct nlmsghdr *);
+
 struct network_netlink_buffer {
     buffer_list_t * in;
     buffer_list_t * out;
@@ -56,10 +58,7 @@ struct network_netlink_func {
     int32_t (*close)(___notnull network_netlink_t *);
     int32_t (*check)(___notnull network_netlink_t *, uint32_t);
 
-    network_netlink_request_t * (*req)(___notnull network_netlink_t *, ___notnull socket_event_subscription_t *, struct nlmsghdr *);
-
-    // network_netlink_message_request_t * (*req)(___notnull network_netlink_t *, struct nlmsghdr *, network_netlink_message_request_on_t);
-    // int32_t (*wait)(___notnull network_netlink_t *, ___notnull network_netlink_message_request_t *);
+    network_netlink_request_t * (*req)(___notnull network_netlink_t *, ___notnull socket_event_subscription_t *, struct nlmsghdr *, network_netlink_request_callback_t);
 };
 
 #define network_netlink_table_main_mark             1
@@ -74,21 +73,20 @@ extern network_netlink_t * network_netlink_gen(uint32_t subscriptions);
 
 extern network_netlink_t * network_netlink_get(void);
 
-#define network_netlink_rem(descriptor)                             ((descriptor)->func->rem(descriptor))
-#define network_netlink_open(descriptor)                            ((descriptor)->func->open(descriptor))
-#define network_netlink_read(descriptor)                            ((descriptor)->func->read(descriptor))
-#define network_netlink_write(descriptor)                           ((descriptor)->func->write(descriptor))
-#define network_netlink_close(descriptor)                           ((descriptor)->func->close(descriptor))
-#define network_netlink_check(descriptor, state)                    ((descriptor)->func->check(descriptor, state))
-#define network_netlink_req(descriptor, subscription, message)      ((descriptor)->func->req(descriptor, subscription, message))
-// #define network_netlink_wait(descriptor, message)                   ((descriptor)->func->wait(descriptor, message))
+#define network_netlink_rem(descriptor)                                     ((descriptor)->func->rem(descriptor))
+#define network_netlink_open(descriptor)                                    ((descriptor)->func->open(descriptor))
+#define network_netlink_read(descriptor)                                    ((descriptor)->func->read(descriptor))
+#define network_netlink_write(descriptor)                                   ((descriptor)->func->write(descriptor))
+#define network_netlink_close(descriptor)                                   ((descriptor)->func->close(descriptor))
+#define network_netlink_check(descriptor, state)                            ((descriptor)->func->check(descriptor, state))
+#define network_netlink_req(descriptor, subscription, message, callback)    ((descriptor)->func->req(descriptor, subscription, message, callback))
 
-#define network_netlink_message_ok(message, len)                    NLMSG_OK(message, len)
-#define network_netlink_message_next(message, len)                  NLMSG_NEXT(message, len)
+#define network_netlink_message_ok(message, len)                            NLMSG_OK(message, len)
+#define network_netlink_message_next(message, len)                          NLMSG_NEXT(message, len)
 
-#define netlink_protocol_data_get(type, address, len)               ((type)(((void *) address) + NLMSG_ALIGN(len)))
-#define netlink_protocol_data_end(header)                           ((((void *)(header)) + NLMSG_ALIGN(header->nlmsg_len)))
-#define netlink_protocol_attr_next(attr)                            ((struct rtattr *)(((void *)(attr))  + RTA_ALIGN((attr)->rta_len)))
+#define netlink_protocol_data_get(type, address, len)                       ((type)(((void *) address) + NLMSG_ALIGN(len)))
+#define netlink_protocol_data_end(header)                                   ((((void *)(header)) + NLMSG_ALIGN(header->nlmsg_len)))
+#define netlink_protocol_attr_next(attr)                                    ((struct rtattr *)(((void *)(attr))  + RTA_ALIGN((attr)->rta_len)))
 
 extern void netlink_protocol_debug(FILE * stream, void * data);
 

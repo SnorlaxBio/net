@@ -28,7 +28,7 @@ static int64_t network_netlink_func_read(___notnull network_netlink_t * descript
 static int64_t network_netlink_func_write(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_close(___notnull network_netlink_t * descriptor);
 static int32_t network_netlink_func_check(___notnull network_netlink_t * descriptor, uint32_t state);
-static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, ___notnull socket_event_subscription_t * subscription, struct nlmsghdr * message);
+static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, ___notnull socket_event_subscription_t * subscription, struct nlmsghdr * message, network_netlink_request_callback_t callback);
 
 static network_netlink_func_t func = {
     network_netlink_func_rem,
@@ -277,13 +277,13 @@ static int32_t network_netlink_func_check(___notnull network_netlink_t * descrip
     return true;
 }
 
-static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, ___notnull socket_event_subscription_t * subscription, struct nlmsghdr * message) {
+static network_netlink_request_t * network_netlink_func_req(___notnull network_netlink_t * descriptor, ___notnull socket_event_subscription_t * subscription, struct nlmsghdr * message, network_netlink_request_callback_t callback) {
 #ifndef   RELEASE
     snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(message == nil, false, "critical", ""); 
 #endif // RELEASE
 
-    network_netlink_request_t * node = network_netlink_request_gen(descriptor->buffer.out, message, message->nlmsg_len);
+    network_netlink_request_t * node = network_netlink_request_gen(descriptor->buffer.out, message, message->nlmsg_len, callback);
 
     message->nlmsg_seq = (descriptor->seq = descriptor->seq + 1);
 

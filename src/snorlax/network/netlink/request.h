@@ -21,6 +21,8 @@ struct network_netlink_request_func;
 typedef struct network_netlink_request network_netlink_request_t;
 typedef struct network_netlink_request_func network_netlink_request_func_t;
 
+typedef void (*network_netlink_request_callback_t)(struct nlmsghdr *, uint32_t, struct nlmsghdr *);
+
 struct network_netlink_request {
     network_netlink_request_func_t * func;
     sync_t * sync;
@@ -33,6 +35,7 @@ struct network_netlink_request {
     struct nlmsghdr * message;
     uint32_t status;
     uint64_t done;
+    network_netlink_request_callback_t callback;
 };
 
 struct network_netlink_request_func {
@@ -56,7 +59,7 @@ struct network_netlink_request_func {
     void (*done_set)(network_netlink_request_t *, uint64_t);
 };
 
-extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n);
+extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n, network_netlink_request_callback_t callback);
 
 #define network_netlink_request_rem(message)                    ((message)->func->rem(message))
 #define network_netlink_request_front(message)                  ((message)->func->front(message))

@@ -37,7 +37,7 @@ static network_netlink_request_func_t func = {
     network_netlink_request_func_done_set
 };
 
-extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n) {
+extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * buffer, struct nlmsghdr * nlmsg, uint64_t n, network_netlink_request_callback_t callback) {
     network_netlink_request_t * node = (network_netlink_request_t *) calloc(1, sizeof(network_netlink_request_t));
 
     node->func = address_of(func);
@@ -54,6 +54,8 @@ extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * b
         node->capacity = n;
         node->message = (struct nlmsghdr *) malloc(n);
     }
+
+    node->callback = callback;
 
     return node;
 }
