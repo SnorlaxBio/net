@@ -25,25 +25,6 @@ ExternalProject_Add(snorlax-std
     BUILD_COMMAND     ${CMAKE_COMMAND} --build "${PROJECT_SOURCE_DIR}/lib/snorlax/std/build"
                                        --target all)
 
-ExternalProject_Add(snorlax-protocol
-    PREFIX          "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol"
-    TMP_DIR         "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/tmp"
-    STAMP_DIR       "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/stamp"
-    DOWNLOAD_DIR    "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/src"
-    SOURCE_DIR      "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/src"
-    BINARY_DIR      "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/build"
-    INSTALL_DIR     "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/install"
-    LOG_DIR         "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/log"
-    GIT_REPOSITORY  git@github.com:SnorlaxBio/protocol.git
-    GIT_TAG         main
-    GIT_REMOTE_NAME origin
-    CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug
-                                       -S "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/src"
-                                       -B "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/build"
-                                       --install-prefix ${PROJECT_SOURCE_DIR}
-    BUILD_COMMAND     ${CMAKE_COMMAND} --build "${PROJECT_SOURCE_DIR}/lib/snorlax/protocol/build"
-                                       --target all)
-
 ExternalProject_Add(snorlax-eva
     PREFIX          "${PROJECT_SOURCE_DIR}/lib/snorlax/eva"
     TMP_DIR         "${PROJECT_SOURCE_DIR}/lib/snorlax/eva/tmp"
@@ -87,7 +68,7 @@ add_executable(snorlax-network-tun  ${SNORLAX_NET_SOURCE}
                                     ${SNORLAX_NET_HEADER}
                                     src/snorlax/network/tun/main.c)
 target_compile_options(snorlax-network-tun PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-target_link_libraries(snorlax-network-tun libsnorlax-eva.a libsnorlax-protocol.a libsnorlax-std.a)
+target_link_libraries(snorlax-network-tun libsnorlax-eva.a libsnorlax-std.a)
 
 install(TARGETS snorlax-net ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/ DESTINATION "${CMAKE_INSTALL_PREFIX}/include"

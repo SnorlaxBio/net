@@ -1,9 +1,9 @@
 #include <snorlax/network/tun.h>
 #include <snorlax/network/netlink.h>
 #include <snorlax/eva.h>
-#include <snorlax/protocol/internet.h>
-#include <snorlax/protocol/internet/version4.h>
-#include <snorlax/protocol/internet/version6.h>
+// #include <snorlax/protocol/internet.h>
+// #include <snorlax/protocol/internet/version4.h>
+// #include <snorlax/protocol/internet/version6.h>
 
 network_tun_t * tun = nil;
 descriptor_event_subscription_t * subscription = nil;
