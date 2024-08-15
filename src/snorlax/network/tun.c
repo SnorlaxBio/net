@@ -27,7 +27,7 @@ typedef int64_t (*network_tun_func_write_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_close_t)(___notnull network_tun_t *);
 typedef int32_t (*network_tun_func_check_t)(___notnull network_tun_t *, uint32_t);
 
-static int32_t network_tun_func_project(___notnull network_tun_t * descriptor, ___notnull descriptor_t * s);
+static int32_t network_tun_func_protect(___notnull network_tun_t * descriptor, ___notnull descriptor_t * s);
 
 static network_tun_func_t func = {
     (network_tun_func_rem_t) descriptor_func_rem,
@@ -36,7 +36,7 @@ static network_tun_func_t func = {
     (network_tun_func_write_t) descriptor_func_write,
     (network_tun_func_close_t) descriptor_func_close,
     (network_tun_func_check_t) descriptor_func_check,
-    network_tun_func_project
+    network_tun_func_protect
 };
 
 extern network_tun_t * network_tun_gen(void) {
@@ -133,7 +133,7 @@ extern int32_t network_tun_func_open(network_tun_t * descriptor) {
     return success;
 }
 
-static int32_t network_tun_func_project(___notnull network_tun_t * descriptor, ___notnull descriptor_t * s) {
+static int32_t network_tun_func_protect(___notnull network_tun_t * descriptor, ___notnull descriptor_t * s) {
 #ifndef   RELEASE
 //    snorlaxdbg(descriptor == nil, false, "critical", "");
     snorlaxdbg(s == nil, false, "critical", "");
