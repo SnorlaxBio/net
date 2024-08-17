@@ -3,8 +3,6 @@
 #include <errno.h>
 #include <net/if.h>
 #include <linux/if_tun.h>
-#include <net/if.h>
-#include <netinet/in.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
