@@ -48,12 +48,14 @@ include_directories(src include)
 link_directories(${PROJECT_SOURCE_DIR}/lib ${PROJECT_SOURCE_DIR}/build)
 
 set(SNORLAX_NET_SOURCE      src/snorlax/network.c
+                            src/snorlax/network/if.c
                             src/snorlax/network/ip/addr.c
                             src/snorlax/network/tun.c
                             src/snorlax/network/netlink.c
                             src/snorlax/network/netlink/message.c
                             src/snorlax/network/netlink/request.c)
 set(SNORLAX_NET_HEADER      src/snorlax/network.h
+                            src/snorlax/network/if.h
                             src/snorlax/network/ip/addr.h
                             src/snorlax/network/tun.h
                             src/snorlax/network/netlink.h
