@@ -40,6 +40,7 @@ struct network_netlink_buffer {
 struct network_netlink {
     network_netlink_func_t * func;
     sync_t * sync;
+    event_object_meta_t * meta;
     network_netlink_buffer_t buffer;
     descriptor_exception_t exception;
     int32_t value;

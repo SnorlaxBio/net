@@ -73,6 +73,7 @@ static network_netlink_t * network_netlink_func_rem(___notnull network_netlink_t
     descriptor->buffer.in = buffer_list_rem(descriptor->buffer.in);
     descriptor->buffer.out = buffer_list_rem(descriptor->buffer.out);
     descriptor->sync = sync_rem(descriptor->sync);
+    if(descriptor->meta) descriptor->meta = event_object_meta_rem(descriptor->meta);
 
     free(descriptor);
 
