@@ -83,7 +83,7 @@ int main(int argc, char ** argv) {
     tun = network_tun_gen();
 
     if(network_tun_open(tun) == success) {
-        subscription = snorlax_eva_descriptor_sub((descriptor_t *) tun, handler, nil);
+        subscription = snorlax_eva_descriptor_sub((descriptor_t *) tun, handler);
         return snorlax_eva_run();
     }
 
