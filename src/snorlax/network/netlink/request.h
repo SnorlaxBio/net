@@ -81,4 +81,18 @@ extern network_netlink_request_t * network_netlink_request_gen(buffer_list_t * b
 #define network_netlink_request_done_get(message)               ((message)->func->done_get(message))
 #define network_netlink_request_done_set(message, v)            ((message)->func->done_set(message, v))
 
+/**
+ * If message: network_netlink_message_t has a registered callback, call it.
+ * 
+ * @param in request `network_netlink_request_t` netlink message object
+ * @param in origin `struct nlmsghdr` original message to be requested
+ * @param in state `uint32_t` response state
+ * @param in response `struct nlmsghdr` response message.
+ */
+#define network_netlink_request_on(request, original, state, response) do {         \
+    if(request->callback) {                                                         \
+        request->callback(original, state, response);                               \
+    }                                                                               \
+} while(0)
+
 #endif // __SNORLAX__NETWORK_NETLINK_REQUEST__H__
