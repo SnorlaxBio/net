@@ -3,7 +3,7 @@
  * @brief
  * @details
  * 
- * @author      snorlax <ceo@snorlax.bio>
+ * @author      snorlax <opuntia@snorlax.bio>
  * @since       July 7, 2024
  */
 
